@@ -25,23 +25,23 @@
 
 ## Highlighting Commands
 
-nov-highlights-green        	    `g`
-nov-highlights-orange	            `h`
-nov-highlights-underline	        `u`
-nov-highlights-strikeout	        `s`
-nov-highlights-annotate	            `n`
-nov-highlights-view-annotation	    `v`
-nov-highlights-remove-at-point	    `M-r`
-nov-highlights-remove-in-region	    `D`
-nov-highlights-export-to-org	    `e`
-nov-highlights-list	                `M-l`
-nov-highlights-next-annotation	    `M-n`
-nov-highlights-previous-annotation	`M-p`
+nov-highlights-green        	    `g`  
+nov-highlights-orange	            `h`  
+nov-highlights-underline	        `u`  
+nov-highlights-strikeout	        `s`  
+nov-highlights-annotate	            `n`  
+nov-highlights-view-annotation	    `v`  
+nov-highlights-remove-at-point	    `M-r`  
+nov-highlights-remove-in-region	    `D`  
+nov-highlights-export-to-org	    `e`  
+nov-highlights-list	                `M-l`  
+nov-highlights-next-annotation	    `M-n`  
+nov-highlights-previous-annotation	`M-p`  
 
 ## Zoom commands (in Nov mode):
 
-nov-zoom-in	    `C-+` or `C-=`
-nov-zoom-out	`C--`
-nov-zoom-reset	`C-0`
+nov-zoom-in	    `C-+` or `C-=`  
+nov-zoom-out	`C--`  
+nov-zoom-reset	`C-0`  
 
 
