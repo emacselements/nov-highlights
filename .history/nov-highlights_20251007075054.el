@@ -1,5 +1,5 @@
 ;;; nov-highlights.el --- Highlights and annotations for Nov Mode -*- lexical-binding: t -*-
-;;; Author: Raoul Comninos
+
 ;;; Commentary:
 ;; This package provides highlighting and annotation functionality for Nov Mode (ePub reader)
 ;; Features:
