@@ -54,7 +54,7 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
 
 ;;; Core Functions
 
-(defun nov-highlights--current-book-id ()
+(defun nov-highlights--get-book-id ()
   "Get unique identifier for current book."
   (when (bound-and-true-p nov-file-name)
     (expand-file-name nov-file-name)))
@@ -104,7 +104,7 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
 (defun nov-highlights--restore-highlights ()
   "Restore highlights for current chapter."
   (nov-highlights--remove-overlays)
-  (let ((book-id (nov-highlights--current-book-id))
+  (let ((book-id (nov-highlights--get-book-id))
         (chapter-id (nov-highlights--get-chapter-id)))
     (when (and book-id chapter-id)
       (let ((book-highlights (gethash book-id nov-highlights-db)))
@@ -123,7 +123,7 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
       (let* ((start (region-beginning))
              (end (region-end))
              (text (buffer-substring-no-properties start end))
-             (book-id (nov-highlights--current-book-id))
+             (book-id (nov-highlights--get-book-id))
              (chapter-id (nov-highlights--get-chapter-id)))
         (when (and book-id chapter-id)
           ;; Store highlight data
@@ -250,7 +250,7 @@ QUOTED-TEXT is shown as context in the header."
 (defun nov-highlights-annotate ()
   "Add annotation to highlighted text at point or selected region."
   (interactive)
-  (let* ((book-id (nov-highlights--current-book-id))
+  (let* ((book-id (nov-highlights--get-book-id))
          (chapter-id (nov-highlights--get-chapter-id))
          (pos (point))
          (book-highlights (gethash book-id nov-highlights-db))
@@ -303,7 +303,7 @@ QUOTED-TEXT is shown as context in the header."
 (defun nov-highlights-remove-at-point ()
   "Remove highlight at point, including annotation if present. Close annotation window if open."
   (interactive)
-  (let* ((book-id (nov-highlights--current-book-id))
+  (let* ((book-id (nov-highlights--get-book-id))
          (chapter-id (nov-highlights--get-chapter-id))
          (pos (point))
          (book-highlights (gethash book-id nov-highlights-db))
@@ -344,7 +344,7 @@ QUOTED-TEXT is shown as context in the header."
   (interactive)
   (if (not (use-region-p))
       (message "No region selected")
-    (let* ((book-id (nov-highlights--current-book-id))
+    (let* ((book-id (nov-highlights--get-book-id))
            (chapter-id (nov-highlights--get-chapter-id))
            (region-start (region-beginning))
            (region-end (region-end))
@@ -389,11 +389,12 @@ QUOTED-TEXT is shown as context in the header."
 (defun nov-highlights-view-annotation ()
   "View annotation at point in a read-only buffer."
   (interactive)
-  (let* ((book-id (nov-highlights--current-book-id))
+  (let* ((book-id (nov-highlights--get-book-id))
          (chapter-id (nov-highlights--get-chapter-id))
          (pos (point))
          (book-highlights (gethash book-id nov-highlights-db))
          (annotation-found nil))
+    
     (dolist (highlight book-highlights)
       (when (and (= (plist-get highlight :chapter) chapter-id)
                  (>= pos (plist-get highlight :start))
@@ -406,9 +407,9 @@ QUOTED-TEXT is shown as context in the header."
             (let* ((buf (get-buffer-create "*Nov Annotation View*"))
                    (existing-win (get-buffer-window buf))
                    (win (or existing-win
-                            (split-window (frame-root-window)
-                                          (- (floor (* (window-height (frame-root-window)) 0.25)))
-                                          'below))))
+                           (split-window (frame-root-window) 
+                                        (- (floor (* (window-height (frame-root-window)) 0.25)))
+                                        'below))))
               (set-window-buffer win buf)
               (with-current-buffer buf
                 (let ((inhibit-read-only t))
@@ -420,20 +421,17 @@ QUOTED-TEXT is shown as context in the header."
                   (insert annotation)
                   (goto-char (point-min))
                   (view-mode 1)
-                  (local-set-key
-                   (kbd "q")
-                   (lambda ()
-                     (interactive)
-                     (quit-window t))))))))))
-    ;; <-- still inside the let* here
+                  (local-set-key (kbd "q") 
+                                (lambda () 
+                                  (interactive)
+                                  (quit-window t))))))))))) 
+    
     (unless annotation-found
-      (message "No annotation at point"))))
-
-;;;;;;;;;;;;;;;; 
+      (message "No annotation at point")))
 
 (defun nov-highlights--get-annotated-highlights ()
   "Get all highlights with annotations in the current chapter, sorted by position."
-  (let* ((book-id (nov-highlights--current-book-id))
+  (let* ((book-id (nov-highlights--get-book-id))
          (chapter-id (nov-highlights--get-chapter-id))
          (book-highlights (gethash book-id nov-highlights-db))
          (annotated nil))
@@ -496,7 +494,7 @@ QUOTED-TEXT is shown as context in the header."
 (defun nov-highlights-export-to-org ()
   "Export all highlights and annotations to an Org file."
   (interactive)
-  (let* ((book-id (nov-highlights--current-book-id))
+  (let* ((book-id (nov-highlights--get-book-id))
          (book-highlights (gethash book-id nov-highlights-db))
          (book-name (file-name-sans-extension 
                     (file-name-nondirectory book-id)))
@@ -556,74 +554,34 @@ QUOTED-TEXT is shown as context in the header."
         (when (y-or-n-p "Open exported file? ")
           (find-file org-file))))))
 
-(defun nov-highlights--current-book-id ()
-  "Return a stable book id for the current Nov buffer without touching history."
-  (let ((nov-buf (or (and (derived-mode-p 'nov-mode) (current-buffer))
-                     (buffer-base-buffer))))
-    (unless (and nov-buf (buffer-live-p nov-buf))
-      (user-error "Run this command from a Nov buffer (an EPUB)"))
-    (with-current-buffer nov-buf
-      ;; nov-file-name is the full path to the .epub; safest stable key.
-      (or (bound-and-true-p nov-file-name)
-          (user-error "Cannot determine book id: nov-file-name is missing")))))
-
 (defun nov-highlights-list ()
-  "List all highlights in the current book (call from a nov-mode buffer)."
+  "List all highlights in current book."
   (interactive)
-  (let* ((book-id (nov-highlights--current-book-id))
-         (book-highlights (or (gethash book-id nov-highlights-db) '()))
+  (let* ((book-id (nov-highlights--get-book-id))
+         (book-highlights (gethash book-id nov-highlights-db))
          (buf (get-buffer-create "*Nov Highlights*")))
+    
     (with-current-buffer buf
-      (let ((inhibit-read-only t))
-        (erase-buffer)
-        (special-mode)                       ; nice read-only listing
-        (insert (format "Highlights for: %s\n\n"
-                        (file-name-nondirectory book-id)))
-        (if (null book-highlights)
-            (insert "No highlights found.\n")
-          (dolist (h (reverse book-highlights))
-            (let* ((chapter (plist-get h :chapter))
-                   (type    (plist-get h :type))
-                   (text    (or (plist-get h :text) ""))
-                   (note    (plist-get h :annotation)))
-              (insert (format "Chapter %d | %s | %s\n"
-                              (1+ (or chapter 0))
-                              (upcase (symbol-name (or type 'unknown)))
-                              (truncate-string-to-width text 60)))
-              (when (and note (stringp note) (> (length note) 0))
-                (insert (format "  → %s\n" note)))
-              (insert "\n")))))
-      (goto-char (point-min)))
-    (display-buffer buf)))
-
-;; (defun nov-highlights-list ()
-;;   "List all highlights in current book."
-;;   (interactive)
-;;   (let* ((book-id (nov-highlights--get-book-id))
-;;          (book-highlights (gethash book-id nov-highlights-db))
-;;          (buf (get-buffer-create "*Nov Highlights*")))
-    
-;;     (with-current-buffer buf
-;;       (erase-buffer)
-;;       (insert (format "Highlights for: %s\n\n" 
-;;                      (file-name-nondirectory book-id)))
+      (erase-buffer)
+      (insert (format "Highlights for: %s\n\n" 
+                     (file-name-nondirectory book-id)))
       
-;;       (if (not book-highlights)
-;;           (insert "No highlights found.\n")
+      (if (not book-highlights)
+          (insert "No highlights found.\n")
         
-;;         (dolist (highlight (reverse book-highlights))
-;;           (insert (format "Chapter %d | %s | %s\n"
-;;                          (1+ (plist-get highlight :chapter))
-;;                          (upcase (symbol-name (plist-get highlight :type)))
-;;                          (truncate-string-to-width 
-;;                           (plist-get highlight :text) 60)))
+        (dolist (highlight (reverse book-highlights))
+          (insert (format "Chapter %d | %s | %s\n"
+                         (1+ (plist-get highlight :chapter))
+                         (upcase (symbol-name (plist-get highlight :type)))
+                         (truncate-string-to-width 
+                          (plist-get highlight :text) 60)))
           
-;;           (when (plist-get highlight :annotation)
-;;             (insert (format "  → %s\n" 
-;;                            (plist-get highlight :annotation))))
-;;           (insert "\n"))))
+          (when (plist-get highlight :annotation)
+            (insert (format "  → %s\n" 
+                           (plist-get highlight :annotation))))
+          (insert "\n"))))
     
-;;     (display-buffer buf)))
+    (display-buffer buf)))
 
 ;;; Setup and Mode Definition
 
