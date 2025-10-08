@@ -210,9 +210,12 @@ across file moves and renames. Falls back to filename if metadata unavailable."
 (defun nov-highlights--annotation-cancel ()
   "Cancel annotation editing and close the buffer."
   (interactive)
-  (let ((annotation-window (selected-window)))
+  (let ((annotation-window (selected-window))
+        (annotation-buffer (current-buffer)))
     (when (window-live-p annotation-window)
-      (delete-window annotation-window)))
+      (delete-window annotation-window))
+    (when (buffer-live-p annotation-buffer)
+      (kill-buffer annotation-buffer)))
   (message "Annotation cancelled"))
 
 (defun nov-highlights--open-annotation-buffer (initial-text callback-fn quoted-text)
@@ -256,6 +259,7 @@ QUOTED-TEXT is shown as context in the header."
         ;; Set up local keybindings
         (local-set-key (kbd "C-c C-c") 'nov-highlights--annotation-commit)
         (local-set-key (kbd "C-c C-k") 'nov-highlights--annotation-cancel)
+        (local-set-key (kbd "q") 'nov-highlights--annotation-cancel)
         
         ;; Position cursor after header
         (goto-char (point-max))))))
@@ -660,6 +664,26 @@ QUOTED-TEXT is shown as context in the header."
 
 ;; Auto-enable in Nov mode
 (add-hook 'nov-mode-hook 'nov-highlights-mode)
+
+;; Clean up annotation windows when nov buffer is closed
+(defun nov-highlights--cleanup-windows ()
+  "Close annotation windows when nov buffer is quit or killed."
+  (when (derived-mode-p 'nov-mode)
+    (let ((annotation-buf (get-buffer "*Nov Annotation View*"))
+          (annotation-edit-buf (get-buffer "*Nov Annotation*")))
+      (when annotation-buf
+        (let ((win (get-buffer-window annotation-buf)))
+          (when win (delete-window win)))
+        (kill-buffer annotation-buf))
+      (when annotation-edit-buf
+        (let ((win (get-buffer-window annotation-edit-buf)))
+          (when win (delete-window win)))
+        (kill-buffer annotation-edit-buf)))))
+
+(add-hook 'nov-mode-hook
+          (lambda ()
+            (add-hook 'kill-buffer-hook 'nov-highlights--cleanup-windows nil t)
+            (add-hook 'quit-window-hook 'nov-highlights--cleanup-windows nil t)))
 
 ;; Zoom Functions
 
