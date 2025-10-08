@@ -7,8 +7,18 @@
 - Add annotations to highlighted text (creates a yellow highlight with a note)
 - Export all highlights and annotations to an Org mode file
 - Persistently store highlights and annotations across sessions
+- **Highlights persist even if you move or rename your epub files!**
 
 This makes it easy to mark up, annotate, and review your eBooks directly within Emacs.
+
+## Key Features
+
+**Stable Highlight Storage**: Highlights are tied to book metadata (title and author), not file paths. This means your annotations and highlights will persist even if you:
+- Move epub files to different directories
+- Rename epub files
+- Sync books across different machines
+
+The highlights are stored in `~/.emacs.d/nov-highlights.el` by default.
 
 ---
 
@@ -58,9 +68,30 @@ nov-highlights-view-annotation	    `v`
 nov-highlights-remove-at-point	    `M-r`  
 nov-highlights-remove-in-region	    `D`  
 nov-highlights-export-to-org	    `e`  
-nov-highlights-list	                `M-l`  
-nov-highlights-next-annotation	    `M-n`  
-nov-highlights-previous-annotation	`M-p`  
+nov-highlights-list	                `M-l`
+nov-highlights-next-annotation	    `M-n`
+nov-highlights-previous-annotation	`M-p`
+
+## Migration for Existing Users
+
+If you were using an older version of nov-highlights and have existing highlights, you have two options:
+
+### Option 1: Start Fresh (Recommended if you have few highlights)
+Simply delete the old database and start over:
+```bash
+rm ~/.emacs.d/nov-highlights.el
+```
+New highlights will automatically use the metadata-based storage system.
+
+### Option 2: Migrate Per-Book
+If you have many highlights to preserve:
+
+1. Open an epub file that has highlights
+2. Run: `M-x nov-highlights-migrate-current-book`
+
+This will find highlights stored under the old filename and migrate them to use the book's metadata (title + author). Repeat for each book with highlights you want to keep.
+
+**Note**: After migration, your highlights will be tied to the book's metadata instead of file paths, so they'll persist across file moves and renames.
 
 ## Zoom commands (in Nov mode):
 

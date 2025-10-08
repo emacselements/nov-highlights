@@ -55,22 +55,9 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
 ;;; Core Functions
 
 (defun nov-highlights--current-book-id ()
-  "Get unique identifier for current book based on metadata.
-Uses title and creator from epub metadata for a stable ID that persists
-across file moves and renames. Falls back to filename if metadata unavailable."
-  (if (bound-and-true-p nov-metadata)
-      (let ((title (cdr (assq 'title nov-metadata)))
-            (creator (cdr (assq 'creator nov-metadata))))
-        (if (and title creator)
-            (format "%s::%s" title creator)
-          ;; Fallback to title only if creator missing
-          (or title
-              ;; Final fallback to filename
-              (when (bound-and-true-p nov-file-name)
-                (file-name-nondirectory nov-file-name)))))
-    ;; Fallback when metadata not available
-    (when (bound-and-true-p nov-file-name)
-      (file-name-nondirectory nov-file-name))))
+  "Get unique identifier for current book."
+  (when (bound-and-true-p nov-file-name)
+    (expand-file-name nov-file-name)))
 
 (defun nov-highlights--get-chapter-id ()
   "Get current chapter number."
@@ -569,6 +556,16 @@ QUOTED-TEXT is shown as context in the header."
         (when (y-or-n-p "Open exported file? ")
           (find-file org-file))))))
 
+(defun nov-highlights--current-book-id ()
+  "Return a stable book id for the current Nov buffer without touching history."
+  (let ((nov-buf (or (and (derived-mode-p 'nov-mode) (current-buffer))
+                     (buffer-base-buffer))))
+    (unless (and nov-buf (buffer-live-p nov-buf))
+      (user-error "Run this command from a Nov buffer (an EPUB)"))
+    (with-current-buffer nov-buf
+      ;; nov-file-name is the full path to the .epub; safest stable key.
+      (or (bound-and-true-p nov-file-name)
+          (user-error "Cannot determine book id: nov-file-name is missing")))))
 
 (defun nov-highlights-list ()
   "List all highlights in the current book (call from a nov-mode buffer)."
