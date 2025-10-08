@@ -179,11 +179,7 @@ across file moves and renames. Falls back to filename if metadata unavailable."
 
 (defvar-local nov-highlights--annotation-callback nil
   "Callback function to save annotation after editing.")
-**Steps to Reproduce**
-1. Open an Emacs Lisp (.el) file
-2. Ask Claude to modify or refactor a function (e.g., "add error handling to this function" or "refactor this let binding")
-3. Review the generated code
-4. Observe parenthesis mismatches - either missing closing parens or extra parens
+
 (defvar-local nov-highlights--annotation-buffer nil
   "Original buffer where annotation was initiated.")
 
