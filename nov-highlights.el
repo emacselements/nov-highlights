@@ -279,7 +279,8 @@ QUOTED-TEXT is shown as context in the header."
         (let* ((start (region-beginning))
                (end (region-end))
                (text (buffer-substring-no-properties start end))
-               (quoted-text (truncate-string-to-width text 60)))
+               (quoted-text (truncate-string-to-width
+                            (replace-regexp-in-string "\n" " " text) 60)))
           (deactivate-mark)
           (nov-highlights--open-annotation-buffer
            ""
@@ -312,7 +313,8 @@ QUOTED-TEXT is shown as context in the header."
                (plist-put highlight :annotation annotation)
                (nov-highlights--save-db)
                (message "Annotation updated"))
-             (truncate-string-to-width text 60)))))
+             (truncate-string-to-width
+              (replace-regexp-in-string "\n" " " text) 60)))))
       
       (unless highlight-found
         (message "No highlight at point. Select text to create annotated highlight.")))))
@@ -431,7 +433,9 @@ QUOTED-TEXT is shown as context in the header."
                 (let ((inhibit-read-only t))
                   (erase-buffer)
                   (org-mode)
-                  (insert "# Annotation for: " (truncate-string-to-width text 60) "\n")
+                  ;; Replace newlines with spaces in the header text
+                  (let ((header-text (replace-regexp-in-string "\n" " " text)))
+                    (insert "# Annotation for: " (truncate-string-to-width header-text 60) "\n"))
                   (insert "# Press 'q' to close\n")
                   (insert "# ────────────────────────────────────────────\n")
                   (insert annotation)
@@ -559,7 +563,8 @@ QUOTED-TEXT is shown as context in the header."
                                   (t "[HIGHLIGHT]"))))
                   
                   (insert "#+BEGIN_QUOTE\n")
-                  (insert text)
+                  ;; Replace newlines with spaces for clean export
+                  (insert (replace-regexp-in-string "\n" " " text))
                   (insert "\n#+END_QUOTE\n")
                   
                   (when annotation
