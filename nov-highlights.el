@@ -1160,8 +1160,12 @@ Fuzzy match needed because EPUB rendering can shift positions slightly."
                                nov-bookmarks-current-file-bookmarks)))
 
       (when selected-bookmark
-        ;; Update access history
-        (setq nov-bookmarks-previous-accessed nov-bookmarks-last-accessed)
+        ;; Update access history intelligently
+        ;; If we're currently at a bookmark, it becomes the previous
+        ;; Otherwise, last-accessed becomes previous (if it exists)
+        (setq nov-bookmarks-previous-accessed 
+              (or current-name  ; Current bookmark name if we're at one
+                  nov-bookmarks-last-accessed))  ; Otherwise keep the last accessed
         (setq nov-bookmarks-last-accessed (plist-get selected-bookmark :name))
 
         ;; Navigate
@@ -1209,11 +1213,35 @@ Fuzzy match needed because EPUB rendering can shift positions slightly."
           (let ((deleted-name (plist-get selected-bookmark :name)))
             (setq nov-bookmarks-current-file-bookmarks
                   (cl-remove selected-bookmark nov-bookmarks-current-file-bookmarks))
-            ;; Clear access history if deleted bookmark was in it
+            
+            ;; Update access history intelligently when deleted bookmark was in it
             (when (string= nov-bookmarks-last-accessed deleted-name)
-              (setq nov-bookmarks-last-accessed nil))
+              (setq nov-bookmarks-last-accessed 
+                    (if (and nov-bookmarks-previous-accessed
+                             (cl-find-if (lambda (bm)
+                                          (string= (plist-get bm :name) nov-bookmarks-previous-accessed))
+                                        nov-bookmarks-current-file-bookmarks))
+                        ;; Use previous if it's still valid
+                        nov-bookmarks-previous-accessed
+                      ;; Otherwise, use first available bookmark
+                      (when nov-bookmarks-current-file-bookmarks
+                        (plist-get (car nov-bookmarks-current-file-bookmarks) :name)))))
+            
             (when (string= nov-bookmarks-previous-accessed deleted-name)
-              (setq nov-bookmarks-previous-accessed nil))
+              (setq nov-bookmarks-previous-accessed 
+                    (if (and nov-bookmarks-last-accessed
+                             (cl-find-if (lambda (bm)
+                                          (string= (plist-get bm :name) nov-bookmarks-last-accessed))
+                                        nov-bookmarks-current-file-bookmarks))
+                        ;; Keep last-accessed as previous if it's valid
+                        nov-bookmarks-last-accessed
+                      ;; Otherwise, use first available bookmark that isn't last-accessed
+                      (when-let ((first-bookmark (cl-find-if
+                                                   (lambda (bm)
+                                                     (not (string= (plist-get bm :name) nov-bookmarks-last-accessed)))
+                                                   nov-bookmarks-current-file-bookmarks)))
+                        (plist-get first-bookmark :name)))))
+            
             (nov-bookmarks-save)
             (message "Bookmark '%s' deleted" deleted-name)))))))
 
@@ -1232,35 +1260,44 @@ Fuzzy match needed because EPUB rendering can shift positions slightly."
            (current-chapter (plist-get pos :chapter))
            (current-position (plist-get pos :position))
            (current-bookmark (nov-bookmarks-find-at-position current-chapter current-position))
-           (choices (mapcar #'nov-bookmarks-format-choice nov-bookmarks-current-file-bookmarks))
            (default-bookmark (or current-bookmark
                                 (when nov-bookmarks-last-accessed
                                   (cl-find-if (lambda (bm)
                                                (string= (plist-get bm :name) nov-bookmarks-last-accessed))
                                              nov-bookmarks-current-file-bookmarks))))
-           (selected (completing-read
-                      (if default-bookmark
-                          (format "Rename bookmark (default %s): " (plist-get default-bookmark :name))
+           (default-name (when default-bookmark (plist-get default-bookmark :name)))
+           (new-name (read-string 
+                      (if default-name
+                          (format "Rename bookmark (editing '%s'): " default-name)
                         "Rename bookmark: ")
-                      choices nil t nil nil
-                      (when default-bookmark
-                        (nov-bookmarks-format-choice default-bookmark))))
-           (selected-bookmark (cl-find-if
-                               (lambda (bm)
-                                 (string= selected (nov-bookmarks-format-choice bm)))
-                               nov-bookmarks-current-file-bookmarks)))
+                      default-name))
+           (selected-bookmark (when (and default-name new-name (not (string-empty-p new-name)))
+                               (cl-find-if (lambda (bm)
+                                            (string= (plist-get bm :name) default-name))
+                                          nov-bookmarks-current-file-bookmarks))))
 
-      (when selected-bookmark
-        (let ((new-name (read-string "New name: " (plist-get selected-bookmark :name))))
-          (when (and new-name (not (string-empty-p new-name)))
-            ;; Check if new name already exists
-            (when (cl-find-if (lambda (bm) (string= (plist-get bm :name) new-name))
+      (when (and selected-bookmark new-name (not (string-empty-p new-name)))
+        (let ((old-name (plist-get selected-bookmark :name)))
+          ;; Only update if name actually changed
+          (if (string= old-name new-name)
+              (message "Name unchanged")
+            ;; Check if new name already exists (excluding current bookmark)
+            (when (cl-find-if (lambda (bm)
+                               (and (not (eq bm selected-bookmark))
+                                    (string= (plist-get bm :name) new-name)))
                              nov-bookmarks-current-file-bookmarks)
               (error "Bookmark with name '%s' already exists" new-name))
 
             (plist-put selected-bookmark :name new-name)
+            
+            ;; Update access history if this bookmark was in it
+            (when (string= nov-bookmarks-last-accessed old-name)
+              (setq nov-bookmarks-last-accessed new-name))
+            (when (string= nov-bookmarks-previous-accessed old-name)
+              (setq nov-bookmarks-previous-accessed new-name))
+            
             (nov-bookmarks-save)
-            (message "Bookmark renamed to '%s'" new-name)))))))
+            (message "Bookmark renamed from '%s' to '%s'" old-name new-name)))))))
 
 ;; Keybindings for bookmarks
 ;; Using C-b prefix to avoid conflicts with nov-mode and nov-highlights-mode
