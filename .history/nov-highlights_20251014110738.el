@@ -53,6 +53,10 @@
   '((t (:background "plum" :foreground "black")))
   "Face for purple highlights in Nov mode.")
 
+(defface nov-highlights-tooltip
+  '((t (:background "#ffff99" :foreground "black" :box (:line-width 1 :color "#cccc00"))))
+  "Face for annotation tooltips in Nov mode.")
+
 ;; Data structure to store highlights
 (defvar-local nov-highlights-data nil
   "List of highlights for the current buffer.
@@ -60,21 +64,6 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
 
 (defvar nov-highlights-db (make-hash-table :test 'equal)
   "Global database of highlights indexed by book file path.")
-
-;; Configure tooltip appearance
-(setq x-gtk-use-system-tooltips nil)  ; Use Emacs tooltips instead of system tooltips
-
-;; Reduce tooltip frame padding and make background opaque
-(defun nov-highlights--configure-tooltip-frame ()
-  "Configure tooltip frame parameters for compact, opaque display."
-  (when (boundp 'tooltip-frame-parameters)
-    (setq tooltip-frame-parameters
-          (append '((internal-border-width . 2)
-                    (border-width . 0)
-                    (alpha . 100))
-                  tooltip-frame-parameters))))
-
-(nov-highlights--configure-tooltip-frame)
 
 ;;; Core Functions
 
@@ -149,7 +138,9 @@ across file moves and renames. Falls back to filename if metadata unavailable."
       (overlay-put overlay 'help-echo
                    (lambda (window object pos)
                      (let ((wrapped-text (nov-highlights--wrap-text annotation 60)))
-                       (propertize wrapped-text 'face '(:height 1.1)))))
+                       (propertize
+                        (format "Annotation:\n%s\n\n(Double-click to edit)" wrapped-text)
+                        'face '(:height 1.1)))))
       ;; Make annotation editable on double-click (to avoid conflict with nov-mode)
       (overlay-put overlay 'mouse-face 'highlight)
       (let ((map (make-sparse-keymap)))
@@ -324,26 +315,20 @@ QUOTED-TEXT is shown as context in the header."
          (original-buffer (current-buffer))
          (view-buf (get-buffer "*Nov Annotation View*"))
          (existing-view-win (when view-buf (get-buffer-window view-buf)))
-         (existing-edit-win (get-buffer-window buf))
          win)
 
-    ;; Reuse existing window or create new one
-    (if (and existing-edit-win (window-live-p existing-edit-win))
+    ;; Reuse existing view window or create new one
+    (if (and existing-view-win (window-live-p existing-view-win))
         (progn
-          ;; Reuse the existing annotation edit window
-          (setq win existing-edit-win)
-          (set-window-buffer win buf))
-      (if (and existing-view-win (window-live-p existing-view-win))
-          (progn
-            ;; Reuse the view window for edit
-            (setq win existing-view-win)
-            (set-window-buffer win buf)
-            (when view-buf (kill-buffer view-buf)))
-        ;; Create new window at same size as view
-        (setq win (split-window (frame-root-window)
-                                (- (floor (* (window-height (frame-root-window)) 0.25)))
-                                'below))
-        (set-window-buffer win buf)))
+          ;; Reuse the view window for edit
+          (setq win existing-view-win)
+          (set-window-buffer win buf)
+          (when view-buf (kill-buffer view-buf)))
+      ;; Create new window at same size as view
+      (setq win (split-window (frame-root-window)
+                              (- (floor (* (window-height (frame-root-window)) 0.25)))
+                              'below))
+      (set-window-buffer win buf))
     (select-window win)
     
     (with-current-buffer buf
@@ -389,7 +374,7 @@ QUOTED-TEXT is shown as context in the header."
           (nov-highlights--open-annotation-buffer
            ""
            (lambda (annotation)
-             (nov-highlights--apply-highlight start end 'yellow annotation)
+             (nov-highlights--apply-highlight start end 'yellow)
              (let ((highlight (list :start start
                                    :end end
                                    :type 'yellow

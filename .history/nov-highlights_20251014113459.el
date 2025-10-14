@@ -324,26 +324,20 @@ QUOTED-TEXT is shown as context in the header."
          (original-buffer (current-buffer))
          (view-buf (get-buffer "*Nov Annotation View*"))
          (existing-view-win (when view-buf (get-buffer-window view-buf)))
-         (existing-edit-win (get-buffer-window buf))
          win)
 
-    ;; Reuse existing window or create new one
-    (if (and existing-edit-win (window-live-p existing-edit-win))
+    ;; Reuse existing view window or create new one
+    (if (and existing-view-win (window-live-p existing-view-win))
         (progn
-          ;; Reuse the existing annotation edit window
-          (setq win existing-edit-win)
-          (set-window-buffer win buf))
-      (if (and existing-view-win (window-live-p existing-view-win))
-          (progn
-            ;; Reuse the view window for edit
-            (setq win existing-view-win)
-            (set-window-buffer win buf)
-            (when view-buf (kill-buffer view-buf)))
-        ;; Create new window at same size as view
-        (setq win (split-window (frame-root-window)
-                                (- (floor (* (window-height (frame-root-window)) 0.25)))
-                                'below))
-        (set-window-buffer win buf)))
+          ;; Reuse the view window for edit
+          (setq win existing-view-win)
+          (set-window-buffer win buf)
+          (when view-buf (kill-buffer view-buf)))
+      ;; Create new window at same size as view
+      (setq win (split-window (frame-root-window)
+                              (- (floor (* (window-height (frame-root-window)) 0.25)))
+                              'below))
+      (set-window-buffer win buf))
     (select-window win)
     
     (with-current-buffer buf
