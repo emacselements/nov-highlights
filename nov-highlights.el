@@ -1182,8 +1182,23 @@ Fuzzy match needed because EPUB rendering can shift positions slightly."
   (if (null nov-bookmarks-current-file-bookmarks)
       (message "No bookmarks to delete")
 
-    (let* ((choices (mapcar #'nov-bookmarks-format-choice nov-bookmarks-current-file-bookmarks))
-           (selected (completing-read "Delete bookmark: " choices nil t))
+    (let* ((pos (nov-bookmarks-current-position))
+           (current-chapter (plist-get pos :chapter))
+           (current-position (plist-get pos :position))
+           (current-bookmark (nov-bookmarks-find-at-position current-chapter current-position))
+           (choices (mapcar #'nov-bookmarks-format-choice nov-bookmarks-current-file-bookmarks))
+           (default-bookmark (or current-bookmark
+                                (when nov-bookmarks-last-accessed
+                                  (cl-find-if (lambda (bm)
+                                               (string= (plist-get bm :name) nov-bookmarks-last-accessed))
+                                             nov-bookmarks-current-file-bookmarks))))
+           (selected (completing-read
+                      (if default-bookmark
+                          (format "Delete bookmark (default %s): " (plist-get default-bookmark :name))
+                        "Delete bookmark: ")
+                      choices nil t nil nil
+                      (when default-bookmark
+                        (nov-bookmarks-format-choice default-bookmark))))
            (selected-bookmark (cl-find-if
                                (lambda (bm)
                                  (string= selected (nov-bookmarks-format-choice bm)))
@@ -1213,8 +1228,23 @@ Fuzzy match needed because EPUB rendering can shift positions slightly."
   (if (null nov-bookmarks-current-file-bookmarks)
       (message "No bookmarks to rename")
 
-    (let* ((choices (mapcar #'nov-bookmarks-format-choice nov-bookmarks-current-file-bookmarks))
-           (selected (completing-read "Rename bookmark: " choices nil t))
+    (let* ((pos (nov-bookmarks-current-position))
+           (current-chapter (plist-get pos :chapter))
+           (current-position (plist-get pos :position))
+           (current-bookmark (nov-bookmarks-find-at-position current-chapter current-position))
+           (choices (mapcar #'nov-bookmarks-format-choice nov-bookmarks-current-file-bookmarks))
+           (default-bookmark (or current-bookmark
+                                (when nov-bookmarks-last-accessed
+                                  (cl-find-if (lambda (bm)
+                                               (string= (plist-get bm :name) nov-bookmarks-last-accessed))
+                                             nov-bookmarks-current-file-bookmarks))))
+           (selected (completing-read
+                      (if default-bookmark
+                          (format "Rename bookmark (default %s): " (plist-get default-bookmark :name))
+                        "Rename bookmark: ")
+                      choices nil t nil nil
+                      (when default-bookmark
+                        (nov-bookmarks-format-choice default-bookmark))))
            (selected-bookmark (cl-find-if
                                (lambda (bm)
                                  (string= selected (nov-bookmarks-format-choice bm)))
