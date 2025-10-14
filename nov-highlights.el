@@ -3,9 +3,12 @@
 ;;; Commentary:
 ;; This package provides highlighting and annotation functionality for Nov Mode (ePub reader)
 ;; Features:
-;; - Highlight text in green (g), orange (h), blue underline (u), and strikeout in red (s)
+;; - Highlight text in green (g), orange (o), purple (,), blue underline (u), and strikeout in red (s)
 ;; - Add annotations to highlighted text (n) - creates yellow highlight with note
-;; - Export all highlights and annotations to Org mode file (e)
+;; - View annotations with mouse hover popup
+;; - Navigate between annotations with M-n and M-p (shows in read-only view, press 'e' to edit)
+;; - Export all highlights and annotations to Org mode file (e) or Markdown file (m)
+;; - Exports maintain proper chapter and position order
 ;; - Persistent storage of highlights across sessions
 
 ;;; Code:
@@ -43,6 +46,10 @@
 (defface nov-highlight-strikeout
   '((t (:strike-through t :background "misty rose" :foreground "dark red")))
   "Face for strikeout highlights in Nov mode.")
+
+(defface nov-highlight-purple
+  '((t (:background "plum" :foreground "black")))
+  "Face for purple highlights in Nov mode.")
 
 ;; Data structure to store highlights
 (defvar-local nov-highlights-data nil
@@ -95,19 +102,23 @@ across file moves and renames. Falls back to filename if metadata unavailable."
         (dolist (entry data)
           (puthash (car entry) (cdr entry) nov-highlights-db))))))
 
-(defun nov-highlights--apply-highlight (start end type)
-  "Apply highlight overlay from START to END with TYPE."
+(defun nov-highlights--apply-highlight (start end type &optional annotation)
+  "Apply highlight overlay from START to END with TYPE and optional ANNOTATION."
   (let ((overlay (make-overlay start end))
         (face (cond
                ((eq type 'green) 'nov-highlight-green)
                ((eq type 'orange) 'nov-highlight-orange)
                ((eq type 'yellow) 'nov-highlight-yellow)
                ((eq type 'underline) 'nov-highlight-underline)
-               ((eq type 'strikeout) 'nov-highlight-strikeout))))
+               ((eq type 'strikeout) 'nov-highlight-strikeout)
+               ((eq type 'purple) 'nov-highlight-purple))))
     (overlay-put overlay 'face face)
     (overlay-put overlay 'nov-highlight t)
     (overlay-put overlay 'nov-highlight-type type)
     (overlay-put overlay 'evaporate t)
+    ;; Add tooltip for annotations
+    (when (and annotation (> (length annotation) 0))
+      (overlay-put overlay 'help-echo annotation))
     overlay))
 
 (defun nov-highlights--remove-overlays ()
@@ -127,7 +138,8 @@ across file moves and renames. Falls back to filename if metadata unavailable."
                 (nov-highlights--apply-highlight
                  (plist-get highlight :start)
                  (plist-get highlight :end)
-                 (plist-get highlight :type))
+                 (plist-get highlight :type)
+                 (plist-get highlight :annotation))
               (error nil))))))))
 
 (defun nov-highlights--create-highlight (type)
@@ -177,6 +189,11 @@ across file moves and renames. Falls back to filename if metadata unavailable."
   (interactive)
   (nov-highlights--create-highlight 'strikeout))
 
+(defun nov-highlights-purple ()
+  "Highlight selected text in purple."
+  (interactive)
+  (nov-highlights--create-highlight 'purple))
+
 (defvar-local nov-highlights--annotation-callback nil
   "Callback function to save annotation after editing.")
 
@@ -223,21 +240,19 @@ across file moves and renames. Falls back to filename if metadata unavailable."
 QUOTED-TEXT is shown as context in the header."
   (let* ((buf (get-buffer-create "*Nov Annotation*"))
          (original-buffer (current-buffer))
-         (existing-win (get-buffer-window buf))
+         (existing-edit-win (get-buffer-window buf))
+         (view-buf (get-buffer "*Nov Annotation View*"))
+         (existing-view-win (when view-buf (get-buffer-window view-buf)))
          win)
-    
-    ;; Close any existing annotation windows first
-    (when (and existing-win (window-live-p existing-win))
-      (delete-window existing-win))
-    
-    ;; Also close the view window if it exists
-    (let* ((view-buf (get-buffer "*Nov Annotation View*"))
-           (view-win (when view-buf (get-buffer-window view-buf))))
-      (when (and view-win (window-live-p view-win))
-        (delete-window view-win)))
-    
+
+    ;; Close ALL existing annotation-related windows first
+    (when (and existing-edit-win (window-live-p existing-edit-win))
+      (delete-window existing-edit-win))
+    (when (and existing-view-win (window-live-p existing-view-win))
+      (delete-window existing-view-win))
+
     ;; Create new window
-    (setq win (split-window (frame-root-window) 
+    (setq win (split-window (frame-root-window)
                             (- (floor (* (window-height (frame-root-window)) 0.25)))
                             'below))
     (set-window-buffer win buf)
@@ -248,19 +263,18 @@ QUOTED-TEXT is shown as context in the header."
         (erase-buffer)
         (org-mode)
         (insert "# Annotation for: " quoted-text "\n")
-        (insert "# Press C-c C-c to save, C-c C-k to cancel\n")
         (insert "# ──────────────────────────────────────────────\n")
         (when initial-text
           (insert initial-text))
-        
+
         (setq nov-highlights--annotation-callback callback-fn)
         (setq nov-highlights--annotation-buffer original-buffer)
-        
+
         ;; Set up local keybindings
         (local-set-key (kbd "C-c C-c") 'nov-highlights--annotation-commit)
         (local-set-key (kbd "C-c C-k") 'nov-highlights--annotation-cancel)
         (local-set-key (kbd "q") 'nov-highlights--annotation-cancel)
-        
+
         ;; Position cursor after header
         (goto-char (point-max))))))
 
@@ -412,7 +426,9 @@ QUOTED-TEXT is shown as context in the header."
          (chapter-id (nov-highlights--get-chapter-id))
          (pos (point))
          (book-highlights (gethash book-id nov-highlights-db))
-         (annotation-found nil))
+         (annotation-found nil)
+         (original-buffer (current-buffer))
+         (original-pos pos))
     (dolist (highlight book-highlights)
       (when (and (= (plist-get highlight :chapter) chapter-id)
                  (>= pos (plist-get highlight :start))
@@ -436,7 +452,7 @@ QUOTED-TEXT is shown as context in the header."
                   ;; Replace newlines with spaces in the header text
                   (let ((header-text (replace-regexp-in-string "\n" " " text)))
                     (insert "# Annotation for: " (truncate-string-to-width header-text 60) "\n"))
-                  (insert "# Press 'q' to close\n")
+                  (insert "# Press 'q' or ESC to close, ENTER to edit\n")
                   (insert "# ────────────────────────────────────────────\n")
                   (insert annotation)
                   (goto-char (point-min))
@@ -445,7 +461,21 @@ QUOTED-TEXT is shown as context in the header."
                    (kbd "q")
                    (lambda ()
                      (interactive)
-                     (quit-window t))))))))))
+                     (quit-window t)))
+                  (local-set-key
+                   (kbd "<escape>")
+                   (lambda ()
+                     (interactive)
+                     (quit-window t)))
+                  (local-set-key
+                   (kbd "RET")
+                   (lambda ()
+                     (interactive)
+                     (quit-window t)
+                     (when (buffer-live-p original-buffer)
+                       (with-current-buffer original-buffer
+                         (goto-char original-pos)
+                         (nov-highlights-annotate))))))))))))
     ;; <-- still inside the let* here
     (unless annotation-found
       (message "No annotation at point"))))
@@ -471,21 +501,21 @@ QUOTED-TEXT is shown as context in the header."
   (let* ((annotated-highlights (nov-highlights--get-annotated-highlights))
          (current-pos (point))
          (next-highlight nil))
-    
+
     (if (not annotated-highlights)
         (message "No annotations in current chapter")
-      
+
       ;; Find the first annotation after current position
       (dolist (highlight annotated-highlights)
         (when (and (not next-highlight)
                    (> (plist-get highlight :start) current-pos))
           (setq next-highlight highlight)))
-      
+
       ;; If no annotation found after current position, wrap to first
       (unless next-highlight
         (setq next-highlight (car annotated-highlights))
         (message "Wrapped to first annotation"))
-      
+
       (when next-highlight
         (goto-char (plist-get next-highlight :start))
         (nov-highlights-view-annotation)))))
@@ -496,23 +526,100 @@ QUOTED-TEXT is shown as context in the header."
   (let* ((annotated-highlights (nov-highlights--get-annotated-highlights))
          (current-pos (point))
          (prev-highlight nil))
-    
+
     (if (not annotated-highlights)
         (message "No annotations in current chapter")
-      
+
       ;; Find the last annotation before current position
       (dolist (highlight annotated-highlights)
         (when (< (plist-get highlight :end) current-pos)
           (setq prev-highlight highlight)))
-      
+
       ;; If no annotation found before current position, wrap to last
       (unless prev-highlight
         (setq prev-highlight (car (last annotated-highlights)))
         (message "Wrapped to last annotation"))
-      
+
       (when prev-highlight
         (goto-char (plist-get prev-highlight :start))
         (nov-highlights-view-annotation)))))
+
+(defun nov-highlights-export-to-markdown ()
+  "Export all highlights and annotations to a Markdown file."
+  (interactive)
+  (let* ((book-id (nov-highlights--current-book-id))
+         (book-highlights (gethash book-id nov-highlights-db))
+         (book-name (file-name-sans-extension
+                    (file-name-nondirectory book-id)))
+         (md-file (read-file-name "Export to Markdown file: "
+                                  nil
+                                  (format "%s-notes.md" book-name)
+                                  nil
+                                  (format "%s-notes.md" book-name))))
+
+    (if (not book-highlights)
+        (message "No highlights to export")
+
+      ;; Sort highlights by chapter and position
+      (let ((sorted-highlights
+             (sort (copy-sequence book-highlights)
+                   (lambda (a b)
+                     (let ((ch-a (plist-get a :chapter))
+                           (ch-b (plist-get b :chapter))
+                           (pos-a (plist-get a :start))
+                           (pos-b (plist-get b :start)))
+                       (if (= ch-a ch-b)
+                           (< pos-a pos-b)
+                         (< ch-a ch-b)))))))
+
+        ;; Group by chapter
+        (let ((by-chapter (make-hash-table :test 'equal)))
+          (dolist (highlight sorted-highlights)
+            (let ((chapter (plist-get highlight :chapter)))
+              (puthash chapter
+                      (append (gethash chapter by-chapter) (list highlight))
+                      by-chapter)))
+
+          ;; Write to Markdown file
+          (with-temp-file md-file
+            (insert (format "# Notes from %s\n\n" book-name))
+            (insert (format "*Date: %s*\n\n" (format-time-string "%Y-%m-%d")))
+
+            (let ((chapters (sort (hash-table-keys by-chapter) #'<)))
+              (dolist (chapter chapters)
+                (insert (format "## Chapter %d\n\n" (1+ chapter)))
+
+                (dolist (highlight (gethash chapter by-chapter))
+                  (let ((type (plist-get highlight :type))
+                        (text (plist-get highlight :text))
+                        (annotation (plist-get highlight :annotation)))
+
+                    ;; Format based on type
+                    (insert (format "### %s\n\n"
+                                   (cond
+                                    ((eq type 'green) "🟢 GREEN")
+                                    ((eq type 'orange) "🟠 ORANGE")
+                                    ((eq type 'purple) "🟣 PURPLE")
+                                    ((eq type 'yellow) "🟡 YELLOW/NOTE")
+                                    ((eq type 'underline) "📘 UNDERLINE")
+                                    ((eq type 'strikeout) "❌ STRIKEOUT")
+                                    (t "📌 HIGHLIGHT"))))
+
+                    (insert "> ")
+                    ;; Replace newlines with spaces for clean export
+                    (insert (replace-regexp-in-string "\n" " " text))
+                    (insert "\n\n")
+
+                    (when annotation
+                      (insert "**Note:** ")
+                      (insert annotation)
+                      (insert "\n\n"))
+
+                    (insert "---\n\n"))))))
+
+          (message "Exported to %s" md-file)
+          (when (y-or-n-p "Open exported file? ")
+            (find-file md-file)))))))
 
 (defun nov-highlights-export-to-org ()
   "Export all highlights and annotations to an Org file."
@@ -529,54 +636,67 @@ QUOTED-TEXT is shown as context in the header."
     
     (if (not book-highlights)
         (message "No highlights to export")
-      
-      ;; Group highlights by chapter
-      (let ((by-chapter (make-hash-table :test 'equal)))
-        (dolist (highlight book-highlights)
-          (let ((chapter (plist-get highlight :chapter)))
-            (puthash chapter 
-                    (cons highlight (gethash chapter by-chapter))
-                    by-chapter)))
-        
-        ;; Write to Org file
-        (with-temp-file org-file
-          (insert (format "#+TITLE: Notes from %s\n" book-name))
-          (insert (format "#+DATE: %s\n\n" (format-time-string "%Y-%m-%d")))
-          
-          (let ((chapters (sort (hash-table-keys by-chapter) #'<)))
-            (dolist (chapter chapters)
-              (insert (format "* Chapter %d\n\n" (1+ chapter)))
-              
-              (dolist (highlight (nreverse (gethash chapter by-chapter)))
-                (let ((type (plist-get highlight :type))
-                      (text (plist-get highlight :text))
-                      (annotation (plist-get highlight :annotation)))
-                  
-                  ;; Format based on type
-                  (insert (format "** %s\n" 
-                                 (cond
-                                  ((eq type 'green) "[GREEN]")
-                                  ((eq type 'orange) "[ORANGE]")
-                                  ((eq type 'yellow) "[YELLOW/NOTE]")
-                                  ((eq type 'underline) "[UNDERLINE]")
-                                  ((eq type 'strikeout) "[STRIKEOUT]")
-                                  (t "[HIGHLIGHT]"))))
-                  
-                  (insert "#+BEGIN_QUOTE\n")
-                  ;; Replace newlines with spaces for clean export
-                  (insert (replace-regexp-in-string "\n" " " text))
-                  (insert "\n#+END_QUOTE\n")
-                  
-                  (when annotation
-                    (insert "\n*Note:* ")
-                    (insert annotation)
-                    (insert "\n"))
-                  
-                  (insert "\n"))))))
-        
-        (message "Exported to %s" org-file)
-        (when (y-or-n-p "Open exported file? ")
-          (find-file org-file))))))
+
+      ;; Sort highlights by chapter and position
+      (let ((sorted-highlights
+             (sort (copy-sequence book-highlights)
+                   (lambda (a b)
+                     (let ((ch-a (plist-get a :chapter))
+                           (ch-b (plist-get b :chapter))
+                           (pos-a (plist-get a :start))
+                           (pos-b (plist-get b :start)))
+                       (if (= ch-a ch-b)
+                           (< pos-a pos-b)
+                         (< ch-a ch-b)))))))
+
+        ;; Group by chapter (preserving order)
+        (let ((by-chapter (make-hash-table :test 'equal)))
+          (dolist (highlight sorted-highlights)
+            (let ((chapter (plist-get highlight :chapter)))
+              (puthash chapter
+                      (append (gethash chapter by-chapter) (list highlight))
+                      by-chapter)))
+
+          ;; Write to Org file
+          (with-temp-file org-file
+            (insert (format "#+TITLE: Notes from %s\n" book-name))
+            (insert (format "#+DATE: %s\n\n" (format-time-string "%Y-%m-%d")))
+
+            (let ((chapters (sort (hash-table-keys by-chapter) #'<)))
+              (dolist (chapter chapters)
+                (insert (format "* Chapter %d\n\n" (1+ chapter)))
+
+                (dolist (highlight (gethash chapter by-chapter))
+                  (let ((type (plist-get highlight :type))
+                        (text (plist-get highlight :text))
+                        (annotation (plist-get highlight :annotation)))
+
+                    ;; Format based on type
+                    (insert (format "** %s\n"
+                                   (cond
+                                    ((eq type 'green) "[GREEN]")
+                                    ((eq type 'orange) "[ORANGE]")
+                                    ((eq type 'purple) "[PURPLE]")
+                                    ((eq type 'yellow) "[YELLOW/NOTE]")
+                                    ((eq type 'underline) "[UNDERLINE]")
+                                    ((eq type 'strikeout) "[STRIKEOUT]")
+                                    (t "[HIGHLIGHT]"))))
+
+                    (insert "#+BEGIN_QUOTE\n")
+                    ;; Replace newlines with spaces for clean export
+                    (insert (replace-regexp-in-string "\n" " " text))
+                    (insert "\n#+END_QUOTE\n")
+
+                    (when annotation
+                      (insert "\n*Note:* ")
+                      (insert annotation)
+                      (insert "\n"))
+
+                    (insert "\n"))))))
+
+          (message "Exported to %s" org-file)
+          (when (y-or-n-p "Open exported file? ")
+            (find-file org-file)))))))
 
 
 (defun nov-highlights-list ()
@@ -650,14 +770,16 @@ QUOTED-TEXT is shown as context in the header."
   :lighter " NovHL"
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "g") 'nov-highlights-green)
-            (define-key map (kbd "h") 'nov-highlights-orange)
+            (define-key map (kbd "o") 'nov-highlights-orange)
+            (define-key map (kbd ",") 'nov-highlights-purple)
             (define-key map (kbd "u") 'nov-highlights-underline)
             (define-key map (kbd "s") 'nov-highlights-strikeout)
             (define-key map (kbd "n") 'nov-highlights-annotate)
             (define-key map (kbd "v") 'nov-highlights-view-annotation)
+            (define-key map (kbd "e") 'nov-highlights-export-to-org)
             (define-key map (kbd "M-r") 'nov-highlights-remove-at-point)
             (define-key map (kbd "D") 'nov-highlights-remove-in-region)
-            (define-key map (kbd "e") 'nov-highlights-export-to-org)
+            (define-key map (kbd "m") 'nov-highlights-export-to-markdown)
             (define-key map (kbd "M-l") 'nov-highlights-list)
             (define-key map (kbd "M-n") 'nov-highlights-next-annotation)
             (define-key map (kbd "M-p") 'nov-highlights-previous-annotation)
