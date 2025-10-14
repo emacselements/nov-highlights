@@ -1134,13 +1134,13 @@ Fuzzy match needed because EPUB rendering can shift positions slightly."
            (current-position (plist-get pos :position))
            (current-bookmark (nov-bookmarks-find-at-position current-chapter current-position))
            (current-name (when current-bookmark (plist-get current-bookmark :name)))
-           ;; Smart default: if at a bookmark, offer last-accessed; otherwise offer current bookmark
-           (default-name (cond
-                          ((and current-name (not (string= current-name nov-bookmarks-last-accessed)))
-                           current-name)
-                          (nov-bookmarks-previous-accessed
-                           nov-bookmarks-previous-accessed)
-                          (t nil)))
+           ;; Smart default: if at a bookmark, offer previous one for toggling;
+           ;; if not at bookmark, offer last accessed
+           (default-name (if current-name
+                            ;; At a bookmark - offer previous for quick toggle
+                            nov-bookmarks-previous-accessed
+                          ;; Not at a bookmark - offer last accessed
+                          nov-bookmarks-last-accessed))
            (choices (mapcar #'nov-bookmarks-format-choice nov-bookmarks-current-file-bookmarks))
            ;; Find default bookmark if it still exists
            (default-bookmark (when default-name
