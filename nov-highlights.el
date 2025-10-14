@@ -7,7 +7,7 @@
 ;; URL: https://github.com/emacselements/nov-highlights
 
 ;;; Commentary:
-;; This package provides highlighting and annotation functionality for Nov Mode (ePub reader)
+;; This package provides highlighting, annotation, and bookmark functionality for Nov Mode (ePub reader)
 ;; Features:
 ;; - Highlight text in green (g), orange (h), purple (,), blue underline (u), and strikeout in red (s)
 ;; - Add annotations to highlighted text (n) - creates yellow highlight with note
@@ -18,7 +18,9 @@
 ;; - Navigation prompts before wrapping to first/last annotation
 ;; - Export all highlights and annotations to Org mode file (e) or Markdown file (m)
 ;; - Exports maintain proper chapter and position order
-;; - Persistent storage of highlights across sessions
+;; - Create and navigate bookmarks (C-b c to create, C-b b to access)
+;; - Bookmarks persist across sessions and survive file moves/renames
+;; - Persistent storage of highlights and bookmarks across sessions
 
 ;;; Code:
 
@@ -979,6 +981,256 @@ QUOTED-TEXT is shown as context in the header."
           (lambda ()
             (add-hook 'kill-buffer-hook 'nov-highlights--cleanup-windows nil t)
             (add-hook 'quit-window-hook 'nov-highlights--cleanup-windows nil t)))
+
+;;;; EPUB Bookmarks System --------------------------------------------------
+;; Author: Raoul Comninos
+
+(require 'cl-lib)
+
+(defvar nov-bookmarks-storage-directory
+  (expand-file-name "nov-bookmarks/" user-emacs-directory)
+  "Directory to store EPUB bookmark files.")
+
+(defvar nov-bookmarks-current-file-bookmarks nil
+  "List of bookmarks for the current EPUB file.")
+
+(defvar nov-bookmarks-last-accessed nil
+  "The last accessed bookmark name.")
+
+(defvar nov-bookmarks-previous-accessed nil
+  "The previously accessed bookmark name.")
+
+(defun nov-bookmarks-ensure-directory ()
+  "Ensure the bookmarks storage directory exists."
+  (unless (file-directory-p nov-bookmarks-storage-directory)
+    (make-directory nov-bookmarks-storage-directory t)))
+
+(defun nov-bookmarks-get-book-hash ()
+  "Get content-based hash for the current EPUB book.
+Uses existing nov-highlights book ID system based on metadata."
+  (when-let ((book-id (nov-highlights--current-book-id)))
+    ;; Hash the book ID to create filesystem-safe filename
+    (secure-hash 'sha256 book-id)))
+
+(defun nov-bookmarks-get-file-path ()
+  "Get the bookmark file path for the current EPUB.
+Uses book metadata hash for robust identification across moves/renames."
+  (when-let ((book-hash (nov-bookmarks-get-book-hash)))
+    (nov-bookmarks-ensure-directory)
+    (expand-file-name
+     (concat book-hash ".bookmarks")
+     nov-bookmarks-storage-directory)))
+
+(defun nov-bookmarks-load ()
+  "Load bookmarks for the current EPUB file."
+  (when-let ((bookmark-file (nov-bookmarks-get-file-path)))
+    (setq nov-bookmarks-current-file-bookmarks
+          (if (file-exists-p bookmark-file)
+              (condition-case nil
+                  (with-temp-buffer
+                    (insert-file-contents bookmark-file)
+                    (read (current-buffer)))
+                (error nil))
+            nil))))
+
+(defun nov-bookmarks-save ()
+  "Save bookmarks for the current EPUB file."
+  (when-let ((bookmark-file (nov-bookmarks-get-file-path)))
+    (with-temp-file bookmark-file
+      (prin1 nov-bookmarks-current-file-bookmarks (current-buffer)))))
+
+(defun nov-bookmarks-current-position ()
+  "Get current chapter and position in EPUB."
+  (list :chapter (nov-highlights--get-chapter-id)
+        :position (point)))
+
+(defun nov-bookmarks-goto-position (chapter position)
+  "Navigate to CHAPTER and POSITION in current EPUB.
+Uses async rendering with timer due to EPUB rendering delays."
+  (when (and chapter position)
+    ;; First navigate to chapter
+    (nov-goto-document chapter)
+    ;; Wait for rendering, then jump to position
+    (run-with-timer 0.2 nil
+      (lambda ()
+        (goto-char position)
+        (recenter)))))
+
+(defun nov-bookmarks-find-at-position (chapter position)
+  "Find the bookmark at CHAPTER and POSITION, returning the bookmark entry or nil.
+Matches if bookmark is within 100 characters of current position in same chapter.
+Fuzzy match needed because EPUB rendering can shift positions slightly."
+  (cl-find-if (lambda (bm)
+                (and (= (plist-get bm :chapter) chapter)
+                     (< (abs (- (plist-get bm :position) position)) 100)))
+              nov-bookmarks-current-file-bookmarks))
+
+(defun nov-bookmarks-format-choice (bookmark)
+  "Format a BOOKMARK as a completion choice string."
+  (format "%s (Chapter %d)"
+          (plist-get bookmark :name)
+          (plist-get bookmark :chapter)))
+
+(defun nov-bookmarks-create ()
+  "Create a bookmark at the current position."
+  (interactive)
+  (unless (eq major-mode 'nov-mode)
+    (error "Not in a nov-mode buffer"))
+
+  ;; Validate we can identify the book
+  (unless (nov-bookmarks-get-book-hash)
+    (error "Cannot identify book - missing metadata"))
+
+  (nov-bookmarks-load)
+
+  (let* ((pos (nov-bookmarks-current-position))
+         (current-chapter (plist-get pos :chapter))
+         (current-position (plist-get pos :position)))
+
+    (unless (and current-chapter current-position (> current-position 0))
+      (error "Invalid position for bookmark"))
+
+    (let* ((bookmark-name (read-string "Bookmark name: "
+                                       (format "Chapter %d" current-chapter)))
+           (bookmark-entry (list :name bookmark-name
+                                :chapter current-chapter
+                                :position current-position
+                                :timestamp (current-time))))
+
+      ;; Remove existing bookmark with same name
+      (setq nov-bookmarks-current-file-bookmarks
+            (cl-remove-if (lambda (bm) (string= (plist-get bm :name) bookmark-name))
+                          nov-bookmarks-current-file-bookmarks))
+
+      ;; Add new bookmark
+      (push bookmark-entry nov-bookmarks-current-file-bookmarks)
+
+      ;; Sort by chapter, then by position within chapter
+      (setq nov-bookmarks-current-file-bookmarks
+            (sort nov-bookmarks-current-file-bookmarks
+                  (lambda (a b)
+                    (let ((a-ch (plist-get a :chapter))
+                          (b-ch (plist-get b :chapter)))
+                      (if (= a-ch b-ch)
+                          (< (plist-get a :position) (plist-get b :position))
+                        (< a-ch b-ch))))))
+
+      (nov-bookmarks-save)
+      (message "Bookmark '%s' created at chapter %d" bookmark-name current-chapter))))
+
+(defun nov-bookmarks-access ()
+  "Navigate to a bookmark, with smart default to previously accessed bookmark."
+  (interactive)
+  (unless (eq major-mode 'nov-mode)
+    (error "Not in a nov-mode buffer"))
+
+  (nov-bookmarks-load)
+
+  (if (null nov-bookmarks-current-file-bookmarks)
+      (message "No bookmarks for this EPUB")
+
+    (let* ((pos (nov-bookmarks-current-position))
+           (current-chapter (plist-get pos :chapter))
+           (current-position (plist-get pos :position))
+           (current-bookmark (nov-bookmarks-find-at-position current-chapter current-position))
+           (current-name (when current-bookmark (plist-get current-bookmark :name)))
+           ;; Smart default: if at a bookmark, offer last-accessed; otherwise offer current bookmark
+           (default-name (cond
+                          ((and current-name (not (string= current-name nov-bookmarks-last-accessed)))
+                           current-name)
+                          (nov-bookmarks-previous-accessed
+                           nov-bookmarks-previous-accessed)
+                          (t nil)))
+           (choices (mapcar #'nov-bookmarks-format-choice nov-bookmarks-current-file-bookmarks))
+           (selected (completing-read
+                      (if default-name
+                          (format "Go to bookmark (default %s): " default-name)
+                        "Go to bookmark: ")
+                      choices nil t nil nil
+                      (when default-name
+                        (nov-bookmarks-format-choice
+                         (cl-find-if (lambda (bm)
+                                      (string= (plist-get bm :name) default-name))
+                                    nov-bookmarks-current-file-bookmarks)))))
+           (selected-bookmark (cl-find-if
+                               (lambda (bm)
+                                 (string= selected (nov-bookmarks-format-choice bm)))
+                               nov-bookmarks-current-file-bookmarks)))
+
+      (when selected-bookmark
+        ;; Update access history
+        (setq nov-bookmarks-previous-accessed nov-bookmarks-last-accessed)
+        (setq nov-bookmarks-last-accessed (plist-get selected-bookmark :name))
+
+        ;; Navigate
+        (nov-bookmarks-goto-position
+         (plist-get selected-bookmark :chapter)
+         (plist-get selected-bookmark :position))
+
+        (message "Navigated to bookmark: %s" (plist-get selected-bookmark :name))))))
+
+(defun nov-bookmarks-delete ()
+  "Delete a bookmark."
+  (interactive)
+  (unless (eq major-mode 'nov-mode)
+    (error "Not in a nov-mode buffer"))
+
+  (nov-bookmarks-load)
+
+  (if (null nov-bookmarks-current-file-bookmarks)
+      (message "No bookmarks to delete")
+
+    (let* ((choices (mapcar #'nov-bookmarks-format-choice nov-bookmarks-current-file-bookmarks))
+           (selected (completing-read "Delete bookmark: " choices nil t))
+           (selected-bookmark (cl-find-if
+                               (lambda (bm)
+                                 (string= selected (nov-bookmarks-format-choice bm)))
+                               nov-bookmarks-current-file-bookmarks)))
+
+      (when selected-bookmark
+        (when (y-or-n-p (format "Delete bookmark '%s'? " (plist-get selected-bookmark :name)))
+          (setq nov-bookmarks-current-file-bookmarks
+                (cl-remove selected-bookmark nov-bookmarks-current-file-bookmarks))
+          (nov-bookmarks-save)
+          (message "Bookmark '%s' deleted" (plist-get selected-bookmark :name)))))))
+
+(defun nov-bookmarks-rename ()
+  "Rename a bookmark."
+  (interactive)
+  (unless (eq major-mode 'nov-mode)
+    (error "Not in a nov-mode buffer"))
+
+  (nov-bookmarks-load)
+
+  (if (null nov-bookmarks-current-file-bookmarks)
+      (message "No bookmarks to rename")
+
+    (let* ((choices (mapcar #'nov-bookmarks-format-choice nov-bookmarks-current-file-bookmarks))
+           (selected (completing-read "Rename bookmark: " choices nil t))
+           (selected-bookmark (cl-find-if
+                               (lambda (bm)
+                                 (string= selected (nov-bookmarks-format-choice bm)))
+                               nov-bookmarks-current-file-bookmarks)))
+
+      (when selected-bookmark
+        (let ((new-name (read-string "New name: " (plist-get selected-bookmark :name))))
+          (when (and new-name (not (string-empty-p new-name)))
+            ;; Check if new name already exists
+            (when (cl-find-if (lambda (bm) (string= (plist-get bm :name) new-name))
+                             nov-bookmarks-current-file-bookmarks)
+              (error "Bookmark with name '%s' already exists" new-name))
+
+            (plist-put selected-bookmark :name new-name)
+            (nov-bookmarks-save)
+            (message "Bookmark renamed to '%s'" new-name)))))))
+
+;; Keybindings for bookmarks
+;; Using C-b prefix to avoid conflicts with nov-mode and nov-highlights-mode
+(with-eval-after-load 'nov
+  (define-key nov-mode-map (kbd "C-b c") #'nov-bookmarks-create)
+  (define-key nov-mode-map (kbd "C-b b") #'nov-bookmarks-access)
+  (define-key nov-mode-map (kbd "C-b d") #'nov-bookmarks-delete)
+  (define-key nov-mode-map (kbd "C-b r") #'nov-bookmarks-rename))
 
 ;; Zoom Functions
 

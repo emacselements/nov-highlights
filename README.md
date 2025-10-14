@@ -72,8 +72,26 @@ nov-highlights-export-to-org	        `e`
 nov-highlights-export-to-markdown	    `m`    
 nov-highlights-list	                    `M-l`  
 nov-highlights-next-annotation	        `M-n`  
-nov-highlights-previous-annotation	    `M-p`  
-nov-highlights-close-annotation-windows	`<ESC>`  
+nov-highlights-previous-annotation	    `M-p`
+nov-highlights-close-annotation-windows	`<ESC>`
+
+## Bookmark Commands
+
+Quickly mark and navigate between important locations in your EPUB books.
+
+nov-bookmarks-create                    `C-b c`
+nov-bookmarks-access                    `C-b b`
+nov-bookmarks-delete                    `C-b d`
+nov-bookmarks-rename                    `C-b r`
+
+**Features:**
+- Bookmarks persist across sessions
+- Survive file moves and renames (metadata-based identification)
+- Smart defaulting for quick navigation between bookmarks
+- Sorted by chapter and position order
+- Quick toggle between current bookmark and last accessed bookmark
+
+**Storage:** `~/.emacs.d/nov-bookmarks/`
 
 ## Configuration
 
