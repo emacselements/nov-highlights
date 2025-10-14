@@ -11,6 +11,7 @@
 ;; Features:
 ;; - Highlight text in green (g), orange (h), purple (,), blue underline (u), and strikeout in red (s)
 ;; - Add annotations to highlighted text (n) - creates yellow highlight with note
+;; - Annotations use Markdown mode by default (configurable to Org mode or plain text)
 ;; - View annotations with mouse hover popup (shows wrapped text with larger font)
 ;; - Click on annotation to edit it immediately, or press 'n' when cursor is on annotation
 ;; - Navigate between annotations with Alt-n and Alt-p (opens editor at bottom automatically)
@@ -33,6 +34,16 @@
   (expand-file-name "nov-highlights.el" user-emacs-directory)
   "File to store highlights and annotations persistently."
   :type 'file
+  :group 'nov-highlights)
+
+(defcustom nov-highlights-annotation-mode 'markdown-mode
+  "Major mode to use for editing and viewing annotations.
+Markdown is the default as it's simpler and more universal.
+You can change this to 'org-mode if you prefer Org syntax,
+or 'text-mode for plain text editing."
+  :type '(choice (const :tag "Markdown (default)" markdown-mode)
+                 (const :tag "Org Mode" org-mode)
+                 (const :tag "Plain Text" text-mode))
   :group 'nov-highlights)
 
 (defface nov-highlight-green
@@ -355,7 +366,7 @@ QUOTED-TEXT is shown as context in the header."
     (with-current-buffer buf
       (let ((inhibit-read-only t))
         (erase-buffer)
-        (org-mode)
+        (funcall nov-highlights-annotation-mode)
         (insert "# Annotation for: " quoted-text "\n")
         (insert "# ──────────────────────────────────────────────\n")
         (when initial-text
@@ -370,6 +381,9 @@ QUOTED-TEXT is shown as context in the header."
         (local-set-key (kbd "C-c C-k") 'nov-highlights--annotation-cancel)
         (local-set-key (kbd "q") 'nov-highlights--annotation-cancel)
         (local-set-key (kbd "<escape>") 'nov-highlights--annotation-cancel)
+        ;; Ensure RET works normally for newlines in edit mode
+        (local-set-key (kbd "RET") 'newline)
+        (local-set-key (kbd "<return>") 'newline)
 
         ;; Position cursor after header
         (goto-char (point-max))))))
@@ -422,6 +436,7 @@ QUOTED-TEXT is shown as context in the header."
              (lambda (annotation)
                (plist-put highlight :annotation annotation)
                (nov-highlights--save-db)
+               (nov-highlights--restore-highlights)  ; Refresh overlays to show tooltip
                (message "Annotation updated"))
              (truncate-string-to-width
               (replace-regexp-in-string "\n" " " text) 60)))))
@@ -544,7 +559,7 @@ QUOTED-TEXT is shown as context in the header."
               (with-current-buffer buf
                 (let ((inhibit-read-only t))
                   (erase-buffer)
-                  (org-mode)
+                  (funcall nov-highlights-annotation-mode)
                   ;; Replace newlines with spaces in the header text
                   (let ((header-text (replace-regexp-in-string "\n" " " text)))
                     (insert "# Annotation for: " (truncate-string-to-width header-text 60) "\n"))

@@ -75,6 +75,27 @@ nov-highlights-next-annotation	        `M-n`
 nov-highlights-previous-annotation	    `M-p`
 nov-highlights-close-annotation-windows	`<ESC>`
 
+## Configuration
+
+### Annotation Mode
+
+By default, annotations are edited and viewed in **Markdown mode**. You can customize this to use Org mode or plain text.
+
+Add to `~/.emacs` or `~/.emacs.d/init.el`:
+
+```elisp
+;; Markdown (default - no config needed)
+(setq nov-highlights-annotation-mode 'markdown-mode)
+
+;; Or switch to Org mode
+(setq nov-highlights-annotation-mode 'org-mode)
+
+;; Or plain text
+(setq nov-highlights-annotation-mode 'text-mode)
+```
+
+**Note**: This only affects the editing experience - annotations are stored as plain text, so existing annotations will work regardless of which mode you choose.
+
 ## Migration for Existing Users
 
 If you were using an older version of nov-highlights and have existing highlights, you have two options:
