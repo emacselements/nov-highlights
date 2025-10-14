@@ -1,0 +1,178 @@
+# CLAUDE.md - Project Context for AI Assistants
+
+## Project Overview
+
+**nov-highlights** is an Emacs package that adds highlighting and annotation functionality to Nov Mode, which is an EPUB reader for Emacs.
+
+## Core Features
+
+- Multiple highlight colors: green, orange, purple, blue underline, red strikeout
+- Yellow highlight with annotations (notes)
+- Persistent storage across sessions using metadata-based identification
+- Export capabilities to both Org mode and Markdown formats
+- Navigation between annotations
+- Mouse interaction support (hover to view, click to edit)
+
+## Technical Architecture
+
+### Storage System
+
+- **Database**: Hash table stored in `~/.emacs.d/nov-highlights.el`
+- **Identification**: Books are identified by metadata (title + author) rather than file paths
+- **Persistence**: Highlights survive file moves, renames, and syncing across machines
+- **Data Structure**: Each highlight is a plist with `:start :end :type :text :annotation :chapter`
+
+### Key Functions
+
+#### User-facing Commands (Interactive)
+- `nov-highlights-green` - Create green highlight
+- `nov-highlights-orange` - Create orange highlight  
+- `nov-highlights-purple` - Create purple highlight
+- `nov-highlights-underline` - Create blue underline
+- `nov-highlights-strikeout` - Create red strikeout
+- `nov-highlights-annotate` - Create yellow highlight with note
+- `nov-highlights-view-annotation` - View annotation at point
+- `nov-highlights-remove-at-point` - Remove highlight at cursor
+- `nov-highlights-remove-in-region` - Remove all highlights in region
+- `nov-highlights-export-to-org` - Export to Org mode file
+- `nov-highlights-export-to-markdown` - Export to Markdown file
+- `nov-highlights-list` - Show list of all highlights
+- `nov-highlights-next-annotation` - Jump to next annotation
+- `nov-highlights-previous-annotation` - Jump to previous annotation
+- `nov-highlights-close-annotation-windows` - Close annotation editor windows
+
+#### Internal Functions (Helper)
+- `nov-highlights--current-book-id` - Get unique book identifier from metadata
+- `nov-highlights--get-chapter-id` - Get current chapter number
+- `nov-highlights--save-db` - Persist database to disk
+- `nov-highlights--load-db` - Load database from disk
+- `nov-highlights--apply-highlight` - Create overlay with styling
+- `nov-highlights--restore-highlights` - Reapply highlights after render
+- `nov-highlights--create-highlight` - Core highlight creation logic
+- `nov-highlights--open-annotation-buffer` - Open annotation editor at bottom
+- `nov-highlights--annotation-commit` - Save annotation changes
+- `nov-highlights--annotation-cancel` - Cancel annotation editing
+
+### Keybindings
+
+The package uses a minor mode (`nov-highlights-mode`) with these keybindings:
+
+| Key | Command |
+|-----|---------|
+| `g` | nov-highlights-green |
+| `h` | nov-highlights-orange |
+| `,` | nov-highlights-purple |
+| `u` | nov-highlights-underline |
+| `s` | nov-highlights-strikeout |
+| `n` | nov-highlights-annotate |
+| `v` | nov-highlights-view-annotation |
+| `e` | nov-highlights-export-to-org |
+| `m` | nov-highlights-export-to-markdown |
+| `r` | nov-highlights-remove-at-point |
+| `D` | nov-highlights-remove-in-region |
+| `M-l` | nov-highlights-list |
+| `M-n` | nov-highlights-next-annotation |
+| `M-p` | nov-highlights-previous-annotation |
+| `<ESC>` | nov-highlights-close-annotation-windows |
+
+### Custom Faces
+
+- `nov-highlight-green` - Light green background
+- `nov-highlight-orange` - Orange background
+- `nov-highlight-purple` - Plum background
+- `nov-highlight-yellow` - Yellow background (for annotations)
+- `nov-highlight-underline` - Blue underline
+- `nov-highlight-strikeout` - Red strikethrough with misty rose background
+
+### Hooks and Integration
+
+- Auto-enables via `nov-mode-hook`
+- Uses `nov-post-html-render-hook` to restore highlights after page renders
+- Integrates with Nov Mode's buffer management
+
+## File Structure
+
+```
+nov-highlights/
+├── nov-highlights.el       # Main package file (989 lines)
+├── README.md               # User documentation
+└── CLAUDE.md              # This file (AI assistant context)
+```
+
+## Development Notes
+
+### When Making Changes
+
+1. **Keep README.md in sync**: The README documents all user-facing commands and keybindings
+2. **Test highlight persistence**: Ensure metadata-based identification works correctly
+3. **Check export functions**: Both Org and Markdown exports should maintain chapter order
+4. **Verify keybindings**: All keybindings should be defined in `nov-highlights-mode` keymap
+
+### Common Patterns
+
+- **Tooltip configuration**: Uses custom frame parameters for compact, opaque display
+- **Annotation editor**: Opens in dedicated window at bottom with specific keybindings (C-c C-c to commit, C-c C-k/q/ESC to cancel)
+- **Navigation wrapping**: Prompts user before wrapping to first/last annotation
+- **Overlay management**: Highlights are stored as overlays with custom properties
+
+### Dependencies
+
+- `nov` - EPUB reader for Emacs (required)
+- `org` - Org mode for export functionality
+- `cl-lib` - Common Lisp library
+
+## Migration Information
+
+The package includes migration functionality for users upgrading from filename-based to metadata-based storage:
+
+- `nov-highlights-migrate-current-book` - Migrates highlights for current book from old to new storage format
+
+## Important Implementation Details
+
+1. **Book identification fallback chain**:
+   - Primary: `title::creator` from epub metadata
+   - Fallback 1: Title only
+   - Fallback 2: Filename
+
+2. **Annotation editing window**:
+   - Fixed height, appears at bottom
+   - Shows quoted text from highlight
+   - Special local keybindings active
+
+3. **Mouse interactions**:
+   - Hover shows wrapped tooltip
+   - Double-click opens editor
+   - Click on annotation with 'n' key also works
+
+4. **Export format**:
+   - Maintains chapter order
+   - Includes book metadata
+   - Shows highlight type and text
+   - Includes annotations where present
+
+## Testing Checklist
+
+When modifying this package, verify:
+- [ ] Highlights persist after closing and reopening epub
+- [ ] Highlights survive file rename/move
+- [ ] All 5 highlight colors work correctly
+- [ ] Annotations can be created, edited, and viewed
+- [ ] Navigation between annotations works with wrapping prompts
+- [ ] Export to Org maintains proper structure
+- [ ] Export to Markdown maintains proper structure
+- [ ] Keybindings match documentation
+- [ ] Removal functions work for single and region
+- [ ] Database saves and loads correctly
+
+## Nov.el Source Code Reference
+
+**IMPORTANT**: When making modifications, always check the actual nov.el implementation first instead of guessing.
+
+The nov.el source code is available in this repository as a git submodule at:
+- `reference/nov/` - The official nov.el repository
+
+Key files to reference:
+- `reference/nov/nov.el` - Main nov.el implementation (EPUB rendering, navigation, etc.)
+
+The runtime nov.el package used by Emacs is installed at:
+- `~/.emacs.d/elpa/nov-<version>/` (version changes with updates)

@@ -9,7 +9,7 @@
 ;;; Commentary:
 ;; This package provides highlighting and annotation functionality for Nov Mode (ePub reader)
 ;; Features:
-;; - Highlight text in green (g), orange (o), purple (,), blue underline (u), and strikeout in red (s)
+;; - Highlight text in green (g), orange (h), purple (,), blue underline (u), and strikeout in red (s)
 ;; - Add annotations to highlighted text (n) - creates yellow highlight with note
 ;; - View annotations with mouse hover popup (shows wrapped text with larger font)
 ;; - Click on annotation to edit it immediately, or press 'n' when cursor is on annotation
@@ -927,7 +927,7 @@ QUOTED-TEXT is shown as context in the header."
             (define-key map (kbd "n") 'nov-highlights-annotate)
             (define-key map (kbd "v") 'nov-highlights-view-annotation)
             (define-key map (kbd "e") 'nov-highlights-export-to-org)
-            (define-key map (kbd "M-r") 'nov-highlights-remove-at-point)
+            (define-key map (kbd "r") 'nov-highlights-remove-at-point)
             (define-key map (kbd "D") 'nov-highlights-remove-in-region)
             (define-key map (kbd "m") 'nov-highlights-export-to-markdown)
             (define-key map (kbd "M-l") 'nov-highlights-list)

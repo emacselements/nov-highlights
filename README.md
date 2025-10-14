@@ -59,14 +59,14 @@ If you find this project helpful, consider supporting it!
 
 ## Highlighting Commands
 
-nov-highlights-green        	        `g`  
-nov-highlights-orange	                `h`  
-nov-highlights-purple	                `,`  
-nov-highlights-underline	            `u`  
-nov-highlights-strikeout	            `s`  
-nov-highlights-annotate	                `n`  
-nov-highlights-view-annotation	        `v`  
-nov-highlights-remove-at-point	        `M-r`  
+nov-highlights-green        	        `g`
+nov-highlights-orange	                `h`
+nov-highlights-purple	                `,`
+nov-highlights-underline	            `u`
+nov-highlights-strikeout	            `s`
+nov-highlights-annotate	                `n`
+nov-highlights-view-annotation	        `v`
+nov-highlights-remove-at-point	        `r`
 nov-highlights-remove-in-region	        `D`  
 nov-highlights-export-to-org	        `e`  
 nov-highlights-export-to-markdown	    `m`  
