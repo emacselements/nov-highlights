@@ -3,4 +3,8 @@
 *.bak.*
 *~
 
+# Development files
+NOV_BOOKMARKS_IMPLEMENTATION_GUIDE.md
+reference/
+
 
