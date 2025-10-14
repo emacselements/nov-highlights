@@ -1,0 +1,3 @@
+[submodule "reference/nov"]
+	path = reference/nov
+	url = https://github.com/wasamasa/nov.el.git
