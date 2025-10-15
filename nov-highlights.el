@@ -9,7 +9,7 @@
 ;;; Commentary:
 ;; This package provides highlighting, annotation, and bookmark functionality for Nov Mode (ePub reader)
 ;; Features:
-;; - Highlight text in green (g), orange (h), purple (,), blue underline (u), and strikeout in red (s)
+;; - Highlight text in green (g), orange (h), purple (,), pink (j), blue underline (u), and strikeout in red (s)
 ;; - Add annotations to highlighted text (n) - creates yellow highlight with note
 ;; - Annotations use Markdown mode by default (configurable to Org mode or plain text)
 ;; - View annotations with mouse hover popup (shows wrapped text with larger font)
@@ -71,6 +71,10 @@ or 'text-mode for plain text editing."
 (defface nov-highlight-purple
   '((t (:background "plum" :foreground "black")))
   "Face for purple highlights in Nov mode.")
+
+(defface nov-highlight-pink
+  '((t (:background "light pink" :foreground "black")))
+  "Face for pink highlights in Nov mode.")
 
 ;; Data structure to store highlights
 (defvar-local nov-highlights-data nil
@@ -156,7 +160,8 @@ across file moves and renames. Falls back to filename if metadata unavailable."
                ((eq type 'yellow) 'nov-highlight-yellow)
                ((eq type 'underline) 'nov-highlight-underline)
                ((eq type 'strikeout) 'nov-highlight-strikeout)
-               ((eq type 'purple) 'nov-highlight-purple))))
+               ((eq type 'purple) 'nov-highlight-purple)
+               ((eq type 'pink) 'nov-highlight-pink))))
     (overlay-put overlay 'face face)
     (overlay-put overlay 'nov-highlight t)
     (overlay-put overlay 'nov-highlight-type type)
@@ -254,6 +259,11 @@ across file moves and renames. Falls back to filename if metadata unavailable."
   "Highlight selected text in purple."
   (interactive)
   (nov-highlights--create-highlight 'purple))
+
+(defun nov-highlights-pink ()
+  "Highlight selected text in pink."
+  (interactive)
+  (nov-highlights--create-highlight 'pink))
 
 (defvar-local nov-highlights--annotation-callback nil
   "Callback function to save annotation after editing.")
@@ -598,7 +608,19 @@ QUOTED-TEXT is shown as context in the header."
                        (with-current-buffer original-buffer
                          (goto-char original-pos)
                          (nov-highlights-annotate)))))
-                  ;; Double-click to edit (removed single click to avoid conflicts)
+                  ;; Single click to edit
+                  (local-set-key
+                   (kbd "<mouse-1>")
+                   (lambda (event)
+                     (interactive "e")
+                     (let ((win (selected-window)))
+                       (when (window-live-p win)
+                         (delete-window win)))
+                     (when (buffer-live-p original-buffer)
+                       (with-current-buffer original-buffer
+                         (goto-char original-pos)
+                         (nov-highlights-annotate)))))
+                  ;; Double-click to edit (for consistency)
                   (local-set-key
                    (kbd "<double-mouse-1>")
                    (lambda (event)
@@ -758,6 +780,7 @@ QUOTED-TEXT is shown as context in the header."
                                     ((eq type 'green) "🟢 GREEN")
                                     ((eq type 'orange) "🟠 ORANGE")
                                     ((eq type 'purple) "🟣 PURPLE")
+                                    ((eq type 'pink) "🩷 PINK")
                                     ((eq type 'yellow) "🟡 YELLOW/NOTE")
                                     ((eq type 'underline) "📘 UNDERLINE")
                                     ((eq type 'strikeout) "❌ STRIKEOUT")
@@ -835,6 +858,7 @@ QUOTED-TEXT is shown as context in the header."
                                     ((eq type 'green) "[GREEN]")
                                     ((eq type 'orange) "[ORANGE]")
                                     ((eq type 'purple) "[PURPLE]")
+                                    ((eq type 'pink) "[PINK]")
                                     ((eq type 'yellow) "[YELLOW/NOTE]")
                                     ((eq type 'underline) "[UNDERLINE]")
                                     ((eq type 'strikeout) "[STRIKEOUT]")
@@ -930,6 +954,7 @@ QUOTED-TEXT is shown as context in the header."
             (define-key map (kbd "g") 'nov-highlights-green)
             (define-key map (kbd "h") 'nov-highlights-orange)
             (define-key map (kbd ",") 'nov-highlights-purple)
+            (define-key map (kbd "j") 'nov-highlights-pink)
             (define-key map (kbd "u") 'nov-highlights-underline)
             (define-key map (kbd "s") 'nov-highlights-strikeout)
             (define-key map (kbd "n") 'nov-highlights-annotate)

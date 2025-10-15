@@ -3,7 +3,7 @@
 
 `nov-highlights` is an Emacs package that adds powerful highlighting and annotation features to Nov Mode (the EPUB reader for Emacs). With this package, you can:
 
-- Highlight text in green, orange, purple, blue underline, or red strikeout
+- Highlight text in green, orange, purple, pink, blue underline, or red strikeout
 - Add annotations to highlighted text (creates a yellow highlight with a note)
 - Export all highlights and annotations to Org mode or Markdown files
 - Persistently store highlights and annotations across sessions
@@ -59,11 +59,12 @@ If you find this project helpful, consider supporting it!
 
 ## Highlighting Commands
 
-nov-highlights-green        	        `g`  
-nov-highlights-orange	                `h`  
-nov-highlights-purple	                `,`  
-nov-highlights-underline	            `u`  
-nov-highlights-strikeout	            `s`  
+nov-highlights-green        	        `g`
+nov-highlights-orange	                `h`
+nov-highlights-purple	                `,`
+nov-highlights-pink	                    `j`
+nov-highlights-underline	            `u`
+nov-highlights-strikeout	            `s`
 nov-highlights-annotate	                `n`
 nov-highlights-view-annotation	        `v`
 nov-highlights-remove-at-point	        `r`
