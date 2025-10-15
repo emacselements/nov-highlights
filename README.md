@@ -98,6 +98,24 @@ nov-bookmarks-rename                    `C-b r`
 
 ## Configuration
 
+### Recommended Nov Mode Settings
+
+For better text navigation and selection in Nov mode (especially for highlighting), add this to your `~/.emacs` or `~/.emacs.d/init.el`:
+
+```elisp
+;; Improved sentence navigation for better text selection in Nov mode
+;; This helps Emacs better recognize sentence boundaries in EPUBs by
+;; handling various punctuation marks and quotation styles correctly
+(setq sentence-end "\\([.!?,;:“”‘’][]\"')}]*\\|[:][[:space:]]\\)[[:space:]]*")
+```
+
+**What this does**: This setting configures Emacs to properly recognize sentence boundaries when using commands like `M-e` (forward-sentence) and `M-a` (backward-sentence). This is particularly useful in EPUBs which often contain:
+- Various quotation marks (straight quotes, curly quotes, etc.)
+- Different punctuation styles
+- Inline citations and parenthetical notes
+
+With this configuration, selecting text for highlighting becomes much more intuitive, as Emacs will correctly jump between sentences instead of stopping at unexpected punctuation.
+
 ### Annotation Mode
 
 By default, annotations are edited and viewed in **Markdown mode**. You can customize this to use Org mode or plain text.
