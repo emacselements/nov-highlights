@@ -1,7 +1,7 @@
 ;;; nov-highlights.el --- Highlights and annotations for Nov Mode -*- lexical-binding: t -*-
 
 ;; Author: Raoul Comninos
-;; Version: 1.0.0
+;; Version: 1.1.0
 ;; Package-Requires: ((emacs "25.1") (nov "0.3.0") (org "9.0"))
 ;; Keywords: epub, reading, highlights, annotations, convenience
 ;; URL: https://github.com/emacselements/nov-highlights
@@ -381,11 +381,13 @@ QUOTED-TEXT is shown as context in the header."
         ;; Set up local keybindings
         (local-set-key (kbd "C-c C-c") 'nov-highlights--annotation-commit)
         (local-set-key (kbd "C-c C-k") 'nov-highlights--annotation-cancel)
-        (local-set-key (kbd "q") 'nov-highlights--annotation-cancel)
         (local-set-key (kbd "<escape>") 'nov-highlights--annotation-cancel)
         ;; Ensure RET works normally for newlines in edit mode
         (local-set-key (kbd "RET") 'newline)
         (local-set-key (kbd "<return>") 'newline)
+        ;; Explicitly unbind "q" to prevent it from triggering cancel
+        ;; (it may be inherited from markdown-mode or other parent keymaps)
+        (local-set-key (kbd "q") 'self-insert-command)
 
         ;; Position cursor after header
         (goto-char (point-max))))))
@@ -596,18 +598,7 @@ QUOTED-TEXT is shown as context in the header."
                        (with-current-buffer original-buffer
                          (goto-char original-pos)
                          (nov-highlights-annotate)))))
-                  ;; Click to edit
-                  (local-set-key
-                   (kbd "<mouse-1>")
-                   (lambda (event)
-                     (interactive "e")
-                     (let ((win (selected-window)))
-                       (when (window-live-p win)
-                         (delete-window win)))
-                     (when (buffer-live-p original-buffer)
-                       (with-current-buffer original-buffer
-                         (goto-char original-pos)
-                         (nov-highlights-annotate)))))
+                  ;; Double-click to edit (removed single click to avoid conflicts)
                   (local-set-key
                    (kbd "<double-mouse-1>")
                    (lambda (event)
@@ -943,10 +934,8 @@ QUOTED-TEXT is shown as context in the header."
             (define-key map (kbd "s") 'nov-highlights-strikeout)
             (define-key map (kbd "n") 'nov-highlights-annotate)
             (define-key map (kbd "v") 'nov-highlights-view-annotation)
-            (define-key map (kbd "e") 'nov-highlights-export-to-org)
             (define-key map (kbd "r") 'nov-highlights-remove-at-point)
             (define-key map (kbd "D") 'nov-highlights-remove-in-region)
-            (define-key map (kbd "m") 'nov-highlights-export-to-markdown)
             (define-key map (kbd "M-l") 'nov-highlights-list)
             (define-key map (kbd "A-n") 'nov-highlights-next-annotation)      ; Alt-N
             (define-key map (kbd "M-n") 'nov-highlights-next-annotation)      ; Also support M-n

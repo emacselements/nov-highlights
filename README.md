@@ -64,16 +64,18 @@ nov-highlights-orange	                `h`
 nov-highlights-purple	                `,`  
 nov-highlights-underline	            `u`  
 nov-highlights-strikeout	            `s`  
-nov-highlights-annotate	                `n`  
-nov-highlights-view-annotation	        `v`  
-nov-highlights-remove-at-point	        `r`  
-nov-highlights-remove-in-region	        `D`    
-nov-highlights-export-to-org	        `e`    
-nov-highlights-export-to-markdown	    `m`    
-nov-highlights-list	                    `M-l`  
-nov-highlights-next-annotation	        `M-n`  
+nov-highlights-annotate	                `n`
+nov-highlights-view-annotation	        `v`
+nov-highlights-remove-at-point	        `r`
+nov-highlights-remove-in-region	        `D`
+nov-highlights-list	                    `M-l`
+nov-highlights-next-annotation	        `M-n`
 nov-highlights-previous-annotation	    `M-p`
 nov-highlights-close-annotation-windows	`<ESC>`
+
+**Export Functions** (available via M-x):
+- `M-x nov-highlights-export-to-org` — Export highlights to Org mode file
+- `M-x nov-highlights-export-to-markdown` — Export highlights to Markdown file
 
 ## Bookmark Commands
 
