@@ -395,6 +395,19 @@ QUOTED-TEXT is shown as context in the header."
         ;; Ensure RET works normally for newlines in edit mode
         (local-set-key (kbd "RET") 'newline)
         (local-set-key (kbd "<return>") 'newline)
+
+        ;; Enable standard mouse behavior for text editing
+        ;; Mouse-1 (single click) positions cursor
+        (local-set-key (kbd "<mouse-1>") 'mouse-set-point)
+        ;; Mouse-2 (middle click) yanks at point
+        (local-set-key (kbd "<mouse-2>") 'mouse-yank-at-click)
+        ;; Double-mouse-1 selects word
+        (local-set-key (kbd "<double-mouse-1>") 'mouse-set-point)
+        ;; Triple-mouse-1 selects line
+        (local-set-key (kbd "<triple-mouse-1>") 'mouse-set-point)
+        ;; Mouse drag for selection
+        (local-set-key (kbd "<drag-mouse-1>") 'mouse-set-region)
+
         ;; Explicitly unbind "q" to prevent it from triggering cancel
         ;; (it may be inherited from markdown-mode or other parent keymaps)
         (local-set-key (kbd "q") 'self-insert-command)
