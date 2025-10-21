@@ -980,6 +980,8 @@ QUOTED-TEXT is shown as context in the header."
             (define-key map (kbd "A-p") 'nov-highlights-previous-annotation)  ; Alt-P
             (define-key map (kbd "M-p") 'nov-highlights-previous-annotation)  ; Also support M-p
             (define-key map (kbd "<escape>") 'nov-highlights-close-annotation-windows)  ; ESC closes annotations
+            (define-key map (kbd "C-c C-e") 'nov-highlights-export-to-org)  ; Export to Org
+            (define-key map (kbd "C-c C-m") 'nov-highlights-export-to-markdown)  ; Export to Markdown (same as C-c RET)
             map)
   
   (if nov-highlights-mode
