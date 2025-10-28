@@ -82,10 +82,10 @@ nov-highlights-close-annotation-windows	`<ESC>`
 
 Quickly mark and navigate between important locations in your EPUB books.
 
-nov-bookmarks-create                    `C-b c`
-nov-bookmarks-access                    `C-b b`
-nov-bookmarks-delete                    `C-b d`
-nov-bookmarks-rename                    `C-b r`
+nov-highlights-bookmarks-create         `C-b c`
+nov-highlights-bookmarks-access         `C-b b`
+nov-highlights-bookmarks-delete         `C-b d`
+nov-highlights-bookmarks-rename         `C-b r`
 
 **Features:**
 - Bookmarks persist across sessions
@@ -158,9 +158,9 @@ This will find highlights stored under the old filename and migrate them to use 
 
 ## Zoom commands (in Nov mode):
 
-nov-zoom-in	    `C-+` or `C-=`  
-nov-zoom-out	`C--`  
-nov-zoom-reset	`C-0`  
+nov-highlights-zoom-in      `C-+` or `C-=`
+nov-highlights-zoom-out     `C--`
+nov-highlights-zoom-reset   `C-0`  
 
 
 
