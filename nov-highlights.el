@@ -113,8 +113,8 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
   "Global database of highlights indexed by book file path.")
 
 ;; Configure tooltip appearance
-(defvar x-gtk-use-system-tooltips)
-(setq x-gtk-use-system-tooltips nil)  ; Use Emacs tooltips instead of system tooltips
+(defvar x-gtk-use-system-tooltips nil
+  "Use Emacs tooltips instead of system tooltips.")
 
 ;; Reduce tooltip frame padding and make background opaque
 (defun nov-highlights--configure-tooltip-frame ()
@@ -257,7 +257,7 @@ across file moves and renames. Falls back to filename if metadata unavailable."
             (puthash book-id (cons highlight book-highlights) nov-highlights-db)
             (nov-highlights--save-db)
             (nov-highlights--restore-highlights))
-          
+
           (deactivate-mark)
           (message "Added %s highlight" type)))
     (message "No region selected")))
@@ -311,12 +311,12 @@ across file moves and renames. Falls back to filename if metadata unavailable."
            (raw-text (buffer-substring-no-properties (point-min) (point-max)))
            (lines (split-string raw-text "\n"))
            (clean-lines nil))
-      
+
       ;; Filter out all header/comment lines
       (dolist (line lines)
         (unless (string-match-p "^#" line)
           (push line clean-lines)))
-      
+
       (let ((annotation-text (string-trim (mapconcat #'identity (nreverse clean-lines) "\n"))))
         (when (buffer-live-p original-buffer)
           (with-current-buffer original-buffer
@@ -403,7 +403,7 @@ QUOTED-TEXT is shown as context in the header."
                                 'below))
         (set-window-buffer win buf)))
     (select-window win)
-    
+
     (with-current-buffer buf
       (let ((inhibit-read-only t))
         (erase-buffer)
@@ -452,7 +452,7 @@ QUOTED-TEXT is shown as context in the header."
          (pos (point))
          (book-highlights (gethash book-id nov-highlights-db))
          (highlight-found nil))
-    
+
     ;; Find highlight at point or create new one
     (if (use-region-p)
         ;; Create new highlight with annotation
@@ -477,7 +477,7 @@ QUOTED-TEXT is shown as context in the header."
                (nov-highlights--save-db)
                (message "Added annotated highlight")))
            quoted-text))
-      
+
       ;; Find existing highlight at point
       (dolist (highlight book-highlights)
         (when (and (= (plist-get highlight :chapter) chapter-id)
@@ -496,7 +496,7 @@ QUOTED-TEXT is shown as context in the header."
                (message "Annotation updated"))
              (truncate-string-to-width
               (replace-regexp-in-string "\n" " " text) 60)))))
-      
+
       (unless highlight-found
         (message "No highlight at point. Select text to create annotated highlight.")))))
 
@@ -513,7 +513,7 @@ Close annotation window if open."
          (had-annotation nil)
          (annotation-buf (get-buffer "*Nov Annotation View*"))
          (annotation-win (when annotation-buf (get-buffer-window annotation-buf))))
-    
+
     (dolist (highlight book-highlights)
       (if (and (= (plist-get highlight :chapter) chapter-id)
                (>= pos (plist-get highlight :start))
@@ -523,20 +523,20 @@ Close annotation window if open."
             (when (plist-get highlight :annotation)
               (setq had-annotation t)))
         (push highlight new-highlights)))
-    
+
     (when removed
       (puthash book-id (nreverse new-highlights) nov-highlights-db)
       (nov-highlights--save-db)
       (nov-highlights--restore-highlights)
-      
+
       ;; Close annotation window if it was open and we removed an annotation
       (when (and had-annotation annotation-win (window-live-p annotation-win))
         (delete-window annotation-win))
-      
+
       (if had-annotation
           (message "Highlight and annotation removed")
         (message "Highlight removed")))
-    
+
     (unless removed
       (message "No highlight at point"))))
 
@@ -555,7 +555,7 @@ Close annotation window if open."
            (removed-annotations 0)
            (annotation-buf (get-buffer "*Nov Annotation View*"))
            (annotation-win (when annotation-buf (get-buffer-window annotation-buf))))
-      
+
       ;; Filter out highlights that overlap with the selected region
       (dolist (highlight book-highlights)
         (let ((hl-start (plist-get highlight :start))
@@ -570,18 +570,18 @@ Close annotation window if open."
                 (when (plist-get highlight :annotation)
                   (setq removed-annotations (1+ removed-annotations))))
             (push highlight new-highlights))))
-      
+
       (if (= removed-count 0)
           (message "No highlights found in region")
         (puthash book-id (nreverse new-highlights) nov-highlights-db)
         (nov-highlights--save-db)
         (nov-highlights--restore-highlights)
         (deactivate-mark)
-        
+
         ;; Close annotation window if any annotations were removed
         (when (and (> removed-annotations 0) annotation-win (window-live-p annotation-win))
           (delete-window annotation-win))
-        
+
         (message "Removed %d highlight%s (%d with annotations)"
                 removed-count
                 (if (= removed-count 1) "" "s")
@@ -679,7 +679,7 @@ Close annotation window if open."
     (unless annotation-found
       (message "No annotation at point"))))
 
-;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;
 
 (defun nov-highlights--get-annotated-highlights ()
   "Get all highlights with annotations in the current chapter, sorted by position."
@@ -850,14 +850,14 @@ Close annotation window if open."
   (interactive)
   (let* ((book-id (nov-highlights--current-book-id))
          (book-highlights (gethash book-id nov-highlights-db))
-         (book-name (file-name-sans-extension 
+         (book-name (file-name-sans-extension
                     (file-name-nondirectory book-id)))
          (org-file (read-file-name "Export to Org file: "
                                   nil
                                   (format "%s-notes.org" book-name)
                                   nil
                                   (format "%s-notes.org" book-name))))
-    
+
     (if (not book-highlights)
         (message "No highlights to export")
 
@@ -959,27 +959,27 @@ Close annotation window if open."
 ;;   (let* ((book-id (nov-highlights--get-book-id))
 ;;          (book-highlights (gethash book-id nov-highlights-db))
 ;;          (buf (get-buffer-create "*Nov Highlights*")))
-    
+
 ;;     (with-current-buffer buf
 ;;       (erase-buffer)
-;;       (insert (format "Highlights for: %s\n\n" 
+;;       (insert (format "Highlights for: %s\n\n"
 ;;                      (file-name-nondirectory book-id)))
-      
+
 ;;       (if (not book-highlights)
 ;;           (insert "No highlights found.\n")
-        
+
 ;;         (dolist (highlight (reverse book-highlights))
 ;;           (insert (format "Chapter %d | %s | %s\n"
 ;;                          (1+ (plist-get highlight :chapter))
 ;;                          (upcase (symbol-name (plist-get highlight :type)))
-;;                          (truncate-string-to-width 
+;;                          (truncate-string-to-width
 ;;                           (plist-get highlight :text) 60)))
-          
+
 ;;           (when (plist-get highlight :annotation)
-;;             (insert (format "  → %s\n" 
+;;             (insert (format "  → %s\n"
 ;;                            (plist-get highlight :annotation))))
 ;;           (insert "\n"))))
-    
+
 ;;     (display-buffer buf)))
 
 ;;; Setup and Mode Definition
@@ -988,38 +988,35 @@ Close annotation window if open."
   "Set up highlights when entering Nov mode."
   (nov-highlights--load-db)
   (nov-highlights--restore-highlights)
-  (add-hook 'nov-post-html-render-hook 'nov-highlights--restore-highlights nil t))
+  (add-hook 'nov-post-html-render-hook #'nov-highlights--restore-highlights nil t))
 
 (define-minor-mode nov-highlights-mode
   "Minor mode for highlights and annotations in Nov mode."
   :lighter " NovHL"
   :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "g") 'nov-highlights-green)
-            (define-key map (kbd "h") 'nov-highlights-orange)
-            (define-key map (kbd ",") 'nov-highlights-purple)
-            (define-key map (kbd "j") 'nov-highlights-pink)
-            (define-key map (kbd "u") 'nov-highlights-underline)
-            (define-key map (kbd "s") 'nov-highlights-strikeout)
-            (define-key map (kbd "n") 'nov-highlights-annotate)
-            (define-key map (kbd "v") 'nov-highlights-view-annotation)
-            (define-key map (kbd "r") 'nov-highlights-remove-at-point)
-            (define-key map (kbd "D") 'nov-highlights-remove-in-region)
-            (define-key map (kbd "M-l") 'nov-highlights-list)
-            (define-key map (kbd "A-n") 'nov-highlights-next-annotation)      ; Alt-N
-            (define-key map (kbd "M-n") 'nov-highlights-next-annotation)      ; Also support M-n
-            (define-key map (kbd "A-p") 'nov-highlights-previous-annotation)  ; Alt-P
-            (define-key map (kbd "M-p") 'nov-highlights-previous-annotation)  ; Also support M-p
-            (define-key map (kbd "<escape>") 'nov-highlights-close-annotation-windows)  ; ESC closes annotations
-            (define-key map (kbd "C-c C-e") 'nov-highlights-export-to-org)  ; Export to Org
-            (define-key map (kbd "C-c C-m") 'nov-highlights-export-to-markdown)  ; Export to Markdown (same as C-c RET)
+            (define-key map (kbd "g") #'nov-highlights-green)
+            (define-key map (kbd "h") #'nov-highlights-orange)
+            (define-key map (kbd ",") #'nov-highlights-purple)
+            (define-key map (kbd "j") #'nov-highlights-pink)
+            (define-key map (kbd "u") #'nov-highlights-underline)
+            (define-key map (kbd "s") #'nov-highlights-strikeout)
+            (define-key map (kbd "n") #'nov-highlights-annotate)
+            (define-key map (kbd "v") #'nov-highlights-view-annotation)
+            (define-key map (kbd "r") #'nov-highlights-remove-at-point)
+            (define-key map (kbd "D") #'nov-highlights-remove-in-region)
+            (define-key map (kbd "M-l") #'nov-highlights-list)
+            (define-key map (kbd "A-n") #'nov-highlights-next-annotation)      ; Alt-N
+            (define-key map (kbd "M-n") #'nov-highlights-next-annotation)      ; Also support M-n
+            (define-key map (kbd "A-p") #'nov-highlights-previous-annotation)  ; Alt-P
+            (define-key map (kbd "M-p") #'nov-highlights-previous-annotation)  ; Also support M-p
+            (define-key map (kbd "<escape>") #'nov-highlights-close-annotation-windows)  ; ESC closes annotations
+            (define-key map (kbd "C-c C-e") #'nov-highlights-export-to-org)  ; Export to Org
+            (define-key map (kbd "C-c C-m") #'nov-highlights-export-to-markdown)  ; Export to Markdown (same as C-c RET)
             map)
-  
+
   (if nov-highlights-mode
       (nov-highlights-setup)
     (nov-highlights--remove-overlays)))
-
-;; Auto-enable in Nov mode
-(add-hook 'nov-mode-hook 'nov-highlights-mode)
 
 ;; Clean up annotation windows when nov buffer is closed
 (defun nov-highlights--cleanup-windows ()
@@ -1036,10 +1033,18 @@ Close annotation window if open."
           (when win (delete-window win)))
         (kill-buffer annotation-edit-buf)))))
 
-(add-hook 'nov-mode-hook
-          (lambda ()
-            (add-hook 'kill-buffer-hook 'nov-highlights--cleanup-windows nil t)
-            (add-hook 'quit-window-hook 'nov-highlights--cleanup-windows nil t)))
+;;;###autoload
+(defun nov-highlights-global-mode-enable ()
+  "Enable nov-highlights-mode in all nov-mode buffers.
+Add this to your init file:
+  (with-eval-after-load \\='nov
+    (nov-highlights-global-mode-enable))"
+  (add-hook 'nov-mode-hook #'nov-highlights-mode)
+  (add-hook 'nov-mode-hook #'nov-highlights--setup-keybindings)
+  (add-hook 'nov-mode-hook
+            (lambda ()
+              (add-hook 'kill-buffer-hook #'nov-highlights--cleanup-windows nil t)
+              (add-hook 'quit-window-hook #'nov-highlights--cleanup-windows nil t))))
 
 ;;;; EPUB Bookmarks System --------------------------------------------------
 ;; Author: Raoul Comninos
@@ -1082,20 +1087,20 @@ Uses book metadata hash for robust identification across moves/renames."
 
 (defun nov-highlights-bookmarks-load ()
   "Load bookmarks for the current EPUB file."
-  (when-let ((bookmark-file (nov-highlights-bookmarks-get-file-path)))
+  (when-let ((bookmark-file-path (nov-highlights-bookmarks-get-file-path)))
     (setq nov-highlights-bookmarks-current-file-bookmarks
-          (if (file-exists-p bookmark-file)
+          (if (file-exists-p bookmark-file-path)
               (condition-case nil
                   (with-temp-buffer
-                    (insert-file-contents bookmark-file)
+                    (insert-file-contents bookmark-file-path)
                     (read (current-buffer)))
                 (error nil))
             nil))))
 
 (defun nov-highlights-bookmarks-save ()
   "Save bookmarks for the current EPUB file."
-  (when-let ((bookmark-file (nov-highlights-bookmarks-get-file-path)))
-    (with-temp-file bookmark-file
+  (when-let ((bookmark-file-path (nov-highlights-bookmarks-get-file-path)))
+    (with-temp-file bookmark-file-path
       (prin1 nov-highlights-bookmarks-current-file-bookmarks (current-buffer)))))
 
 (defun nov-highlights-bookmarks-current-position ()
@@ -1223,7 +1228,7 @@ needed because EPUB rendering can shift positions slightly."
         ;; Update access history intelligently
         ;; If we're currently at a bookmark, it becomes the previous
         ;; Otherwise, last-accessed becomes previous (if it exists)
-        (setq nov-highlights-bookmarks-previous-accessed 
+        (setq nov-highlights-bookmarks-previous-accessed
               (or current-name  ; Current bookmark name if we're at one
                   nov-highlights-bookmarks-last-accessed))  ; Otherwise keep the last accessed
         (setq nov-highlights-bookmarks-last-accessed (plist-get selected-bookmark :name))
@@ -1273,10 +1278,10 @@ needed because EPUB rendering can shift positions slightly."
           (let ((deleted-name (plist-get selected-bookmark :name)))
             (setq nov-highlights-bookmarks-current-file-bookmarks
                   (cl-remove selected-bookmark nov-highlights-bookmarks-current-file-bookmarks))
-            
+
             ;; Update access history intelligently when deleted bookmark was in it
             (when (string= nov-highlights-bookmarks-last-accessed deleted-name)
-              (setq nov-highlights-bookmarks-last-accessed 
+              (setq nov-highlights-bookmarks-last-accessed
                     (if (and nov-highlights-bookmarks-previous-accessed
                              (cl-find-if (lambda (bm)
                                           (string= (plist-get bm :name) nov-highlights-bookmarks-previous-accessed))
@@ -1286,9 +1291,9 @@ needed because EPUB rendering can shift positions slightly."
                       ;; Otherwise, use first available bookmark
                       (when nov-highlights-bookmarks-current-file-bookmarks
                         (plist-get (car nov-highlights-bookmarks-current-file-bookmarks) :name)))))
-            
+
             (when (string= nov-highlights-bookmarks-previous-accessed deleted-name)
-              (setq nov-highlights-bookmarks-previous-accessed 
+              (setq nov-highlights-bookmarks-previous-accessed
                     (if (and nov-highlights-bookmarks-last-accessed
                              (cl-find-if (lambda (bm)
                                           (string= (plist-get bm :name) nov-highlights-bookmarks-last-accessed))
@@ -1301,7 +1306,7 @@ needed because EPUB rendering can shift positions slightly."
                                                      (not (string= (plist-get bm :name) nov-highlights-bookmarks-last-accessed)))
                                                    nov-highlights-bookmarks-current-file-bookmarks)))
                         (plist-get first-bookmark :name)))))
-            
+
             (nov-highlights-bookmarks-save)
             (message "Bookmark '%s' deleted" deleted-name)))))))
 
@@ -1326,7 +1331,7 @@ needed because EPUB rendering can shift positions slightly."
                                                (string= (plist-get bm :name) nov-highlights-bookmarks-last-accessed))
                                              nov-highlights-bookmarks-current-file-bookmarks))))
            (default-name (when default-bookmark (plist-get default-bookmark :name)))
-           (new-name (read-string 
+           (new-name (read-string
                       (if default-name
                           (format "Rename bookmark (editing '%s'): " default-name)
                         "Rename bookmark: ")
@@ -1349,23 +1354,18 @@ needed because EPUB rendering can shift positions slightly."
               (error "Bookmark with name '%s' already exists" new-name))
 
             (plist-put selected-bookmark :name new-name)
-            
+
             ;; Update access history if this bookmark was in it
             (when (string= nov-highlights-bookmarks-last-accessed old-name)
               (setq nov-highlights-bookmarks-last-accessed new-name))
             (when (string= nov-highlights-bookmarks-previous-accessed old-name)
               (setq nov-highlights-bookmarks-previous-accessed new-name))
-            
+
             (nov-highlights-bookmarks-save)
             (message "Bookmark renamed from '%s' to '%s'" old-name new-name)))))))
 
-;; Keybindings for bookmarks
+;; Keybindings for bookmarks will be added via nov-mode-hook
 ;; Using C-b prefix to avoid conflicts with nov-mode and nov-highlights-mode
-(with-eval-after-load 'nov
-  (define-key nov-mode-map (kbd "C-b c") #'nov-highlights-bookmarks-create)
-  (define-key nov-mode-map (kbd "C-b b") #'nov-highlights-bookmarks-access)
-  (define-key nov-mode-map (kbd "C-b d") #'nov-highlights-bookmarks-delete)
-  (define-key nov-mode-map (kbd "C-b r") #'nov-highlights-bookmarks-rename))
 
 ;; Zoom Functions
 
@@ -1384,13 +1384,20 @@ needed because EPUB rendering can shift positions slightly."
   (interactive)
   (text-scale-set 0))
 
-;; Add keybindings for zoom
-(add-hook 'nov-mode-hook
-          (lambda ()
-            (local-set-key (kbd "C-+") #'nov-highlights-zoom-in)
-            (local-set-key (kbd "C-=") #'nov-highlights-zoom-in)  ; Alternative
-            (local-set-key (kbd "C--") #'nov-highlights-zoom-out)
-            (local-set-key (kbd "C-0") #'nov-highlights-zoom-reset)))
+;; Keybindings setup for zoom and bookmarks
+(defun nov-highlights--setup-keybindings ()
+  "Set up keybindings for zoom and bookmarks in nov-mode."
+  (local-set-key (kbd "C-+") #'nov-highlights-zoom-in)
+  (local-set-key (kbd "C-=") #'nov-highlights-zoom-in)  ; Alternative
+  (local-set-key (kbd "C--") #'nov-highlights-zoom-out)
+  (local-set-key (kbd "C-0") #'nov-highlights-zoom-reset)
+  ;; Bookmark keybindings
+  (local-set-key (kbd "C-b c") #'nov-highlights-bookmarks-create)
+  (local-set-key (kbd "C-b b") #'nov-highlights-bookmarks-access)
+  (local-set-key (kbd "C-b d") #'nov-highlights-bookmarks-delete)
+  (local-set-key (kbd "C-b r") #'nov-highlights-bookmarks-rename))
+
+;; Enable keybindings when global mode is enabled (handled in nov-highlights-global-mode-enable)
 
 (provide 'nov-highlights)
 ;;; nov-highlights.el ends here

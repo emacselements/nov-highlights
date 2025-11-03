@@ -11,6 +11,32 @@
 
 This makes it easy to mark up, annotate, and review your eBooks directly within Emacs.
 
+## Installation
+
+### From MELPA
+
+Once nov-highlights is available on MELPA:
+
+```elisp
+;; Install via M-x package-install RET nov-highlights RET
+
+;; Then add to your init file (~/.emacs or ~/.emacs.d/init.el):
+(with-eval-after-load 'nov
+  (nov-highlights-global-mode-enable))
+```
+
+### Manual Installation
+
+1. Download [nov-highlights.el](nov-highlights.el)
+2. Place it in your `load-path`
+3. Add to your init file:
+
+```elisp
+(require 'nov-highlights)
+(with-eval-after-load 'nov
+  (nov-highlights-global-mode-enable))
+```
+
 ## Key Features
 
 **Stable Highlight Storage**: Highlights are tied to book metadata (title and author), not file paths. This means your annotations and highlights will persist even if you:
