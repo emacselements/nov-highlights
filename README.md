@@ -99,10 +99,8 @@ nov-highlights-list	                    `M-l`
 nov-highlights-next-annotation	        `M-n`
 nov-highlights-previous-annotation	    `M-p`
 nov-highlights-close-annotation-windows	`<ESC>`
-
-**Export Functions** (available via M-x):
-- `M-x nov-highlights-export-to-org` — Export highlights to Org mode file
-- `M-x nov-highlights-export-to-markdown` — Export highlights to Markdown file
+nov-highlights-export-to-org	        `C-c C-e`
+nov-highlights-export-to-markdown	    `C-c C-m`
 
 ## Bookmark Commands
 
