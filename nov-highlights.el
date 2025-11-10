@@ -113,8 +113,7 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
   "Global database of highlights indexed by book file path.")
 
 ;; Configure tooltip appearance
-(defvar x-gtk-use-system-tooltips nil
-  "Use Emacs tooltips instead of system tooltips.")
+(setq x-gtk-use-system-tooltips nil)
 
 ;; Reduce tooltip frame padding and make background opaque
 (defun nov-highlights--configure-tooltip-frame ()
@@ -1035,7 +1034,7 @@ Close annotation window if open."
 
 ;;;###autoload
 (defun nov-highlights-global-mode-enable ()
-  "Enable nov-highlights-mode in all nov-mode buffers.
+  "Enable nov-highlights-mode in all `nov-mode' buffers.
 Add this to your init file:
   (with-eval-after-load \\='nov
     (nov-highlights-global-mode-enable))"
@@ -1386,7 +1385,7 @@ needed because EPUB rendering can shift positions slightly."
 
 ;; Keybindings setup for zoom and bookmarks
 (defun nov-highlights--setup-keybindings ()
-  "Set up keybindings for zoom and bookmarks in nov-mode."
+  "Set up keybindings for zoom and bookmarks in `nov-mode'."
   (local-set-key (kbd "C-+") #'nov-highlights-zoom-in)
   (local-set-key (kbd "C-=") #'nov-highlights-zoom-in)  ; Alternative
   (local-set-key (kbd "C--") #'nov-highlights-zoom-out)
