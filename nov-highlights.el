@@ -112,6 +112,12 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
 (defvar nov-highlights-db (make-hash-table :test 'equal)
   "Global database of highlights indexed by book file path.")
 
+(defvar nov-highlights--original-tooltip-setting nil
+  "Original value of `x-gtk-use-system-tooltips' before nov-highlights modified it.")
+
+(defvar nov-highlights--active-buffers 0
+  "Count of buffers with nov-highlights-mode currently enabled.")
+
 ;; Reduce tooltip frame padding and make background opaque
 (defun nov-highlights--configure-tooltip-frame ()
   "Configure tooltip frame parameters for compact, opaque display."
@@ -981,13 +987,28 @@ Close annotation window if open."
 (defun nov-highlights-setup ()
   "Set up highlights when entering Nov mode."
   ;; Configure tooltips for annotations
-  (when (boundp 'x-gtk-use-system-tooltips)
+  ;; Save original tooltip setting only if this is the first buffer enabling the mode
+  (when (and (boundp 'x-gtk-use-system-tooltips)
+             (= nov-highlights--active-buffers 0))
+    (setq nov-highlights--original-tooltip-setting x-gtk-use-system-tooltips)
     (setq x-gtk-use-system-tooltips nil))
+  (setq nov-highlights--active-buffers (1+ nov-highlights--active-buffers))
   (nov-highlights--configure-tooltip-frame)
   ;; Set up highlights
   (nov-highlights--load-db)
   (nov-highlights--restore-highlights)
   (add-hook 'nov-post-html-render-hook #'nov-highlights--restore-highlights nil t))
+
+(defun nov-highlights-cleanup ()
+  "Clean up highlights when disabling Nov highlights mode."
+  (nov-highlights--remove-overlays)
+  ;; Decrement active buffer count and restore tooltip setting if this was the last buffer
+  (when (> nov-highlights--active-buffers 0)
+    (setq nov-highlights--active-buffers (1- nov-highlights--active-buffers))
+    (when (and (= nov-highlights--active-buffers 0)
+               (boundp 'x-gtk-use-system-tooltips)
+               nov-highlights--original-tooltip-setting)
+      (setq x-gtk-use-system-tooltips nov-highlights--original-tooltip-setting))))
 
 (define-minor-mode nov-highlights-mode
   "Minor mode for highlights and annotations in Nov mode."
@@ -1015,7 +1036,7 @@ Close annotation window if open."
 
   (if nov-highlights-mode
       (nov-highlights-setup)
-    (nov-highlights--remove-overlays)))
+    (nov-highlights-cleanup)))
 
 ;; Clean up annotation windows when nov buffer is closed
 (defun nov-highlights--cleanup-windows ()
@@ -1034,7 +1055,7 @@ Close annotation window if open."
 
 ;;;###autoload
 (defun nov-highlights-global-mode-enable ()
-  "Enable nov-highlights-mode in all `nov-mode' buffers.
+  "Enable nov-highlights-mode in all \\='nov-mode buffers.
 Add this to your init file:
   (with-eval-after-load \\='nov
     (nov-highlights-global-mode-enable))"
@@ -1047,8 +1068,6 @@ Add this to your init file:
 
 ;;;; EPUB Bookmarks System --------------------------------------------------
 ;; Author: Raoul Comninos
-
-(require 'cl-lib)
 
 (defvar nov-highlights-bookmarks-storage-directory
   (expand-file-name "nov-bookmarks/" user-emacs-directory)
@@ -1385,7 +1404,7 @@ needed because EPUB rendering can shift positions slightly."
 
 ;; Keybindings setup for zoom and bookmarks
 (defun nov-highlights--setup-keybindings ()
-  "Set up keybindings for zoom and bookmarks in `nov-mode'."
+  "Set up keybindings for zoom and bookmarks in \\='nov-mode."
   (local-set-key (kbd "C-+") #'nov-highlights-zoom-in)
   (local-set-key (kbd "C-=") #'nov-highlights-zoom-in)  ; Alternative
   (local-set-key (kbd "C--") #'nov-highlights-zoom-out)

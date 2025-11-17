@@ -124,7 +124,7 @@ nov-highlights-bookmarks-rename         `C-b r`
 
 ### Important Note About Tooltips
 
-When `nov-highlights-mode` is enabled, it sets `x-gtk-use-system-tooltips` to `nil` to ensure annotations display properly. This is a global Emacs setting. If you need to restore the system tooltip behavior, disable the mode or manually reset the variable.
+When `nov-highlights-mode` is enabled, it sets `x-gtk-use-system-tooltips` to `nil` to ensure annotations display properly. The original value is automatically saved and restored when the mode is disabled. This setting is shared across all nov-highlights buffers - it will only be restored when all nov-highlights buffers have been closed or the mode has been disabled in all buffers.
 
 ### Recommended Nov Mode Settings
 
