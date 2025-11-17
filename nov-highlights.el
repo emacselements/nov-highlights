@@ -112,9 +112,6 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
 (defvar nov-highlights-db (make-hash-table :test 'equal)
   "Global database of highlights indexed by book file path.")
 
-;; Configure tooltip appearance
-(setq x-gtk-use-system-tooltips nil)
-
 ;; Reduce tooltip frame padding and make background opaque
 (defun nov-highlights--configure-tooltip-frame ()
   "Configure tooltip frame parameters for compact, opaque display."
@@ -124,8 +121,6 @@ Each element is a plist with :start :end :type :text :annotation :chapter")
                     (border-width . 0)
                     (alpha . 100))
                   tooltip-frame-parameters))))
-
-(nov-highlights--configure-tooltip-frame)
 
 ;;; Core Functions
 
@@ -985,6 +980,11 @@ Close annotation window if open."
 
 (defun nov-highlights-setup ()
   "Set up highlights when entering Nov mode."
+  ;; Configure tooltips for annotations
+  (when (boundp 'x-gtk-use-system-tooltips)
+    (setq x-gtk-use-system-tooltips nil))
+  (nov-highlights--configure-tooltip-frame)
+  ;; Set up highlights
   (nov-highlights--load-db)
   (nov-highlights--restore-highlights)
   (add-hook 'nov-post-html-render-hook #'nov-highlights--restore-highlights nil t))
