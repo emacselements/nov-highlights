@@ -76,6 +76,7 @@ or \\='text-mode for plain text editing."
                  (const :tag "Plain Text" text-mode))
   :group 'nov-highlights)
 
+
 (defface nov-highlights-highlight-green
   '((t (:background "light green" :foreground "black")))
   "Face for green highlights in Nov mode.")
@@ -993,7 +994,7 @@ Close annotation window if open."
   "Minor mode for highlights and annotations in Nov mode."
   :lighter " NovHL"
   :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "g") #'nov-highlights-green)
+            (define-key map (kbd "y") #'nov-highlights-green)
             (define-key map (kbd "h") #'nov-highlights-orange)
             (define-key map (kbd ",") #'nov-highlights-purple)
             (define-key map (kbd "j") #'nov-highlights-pink)
@@ -1062,6 +1063,10 @@ Add this to your init file:
 
 (defvar nov-highlights-bookmarks-previous-accessed nil
   "The previously accessed bookmark name.")
+
+(defvar-local nov-highlights-bookmarks-last-position nil
+  "Store the last position before jumping to a bookmark.
+This is a plist with :chapter and :position.")
 
 (defun nov-highlights-bookmarks-ensure-directory ()
   "Ensure the bookmarks storage directory exists."
@@ -1224,6 +1229,10 @@ needed because EPUB rendering can shift positions slightly."
                                nov-highlights-bookmarks-current-file-bookmarks)))
 
       (when selected-bookmark
+        ;; Save current position before jumping
+        (setq nov-highlights-bookmarks-last-position
+              (list :chapter current-chapter :position current-position))
+
         ;; Update access history intelligently
         ;; If we're currently at a bookmark, it becomes the previous
         ;; Otherwise, last-accessed becomes previous (if it exists)
@@ -1363,8 +1372,24 @@ needed because EPUB rendering can shift positions slightly."
             (nov-highlights-bookmarks-save)
             (message "Bookmark renamed from '%s' to '%s'" old-name new-name)))))))
 
+(defun nov-highlights-bookmarks-back ()
+  "Go back to the last position before the most recent bookmark navigation."
+  (interactive)
+  (unless (derived-mode-p 'nov-mode)
+    (error "Not in a nov-mode buffer"))
+
+  (if (null nov-highlights-bookmarks-last-position)
+      (message "No previous position to return to")
+
+    (let ((last-chapter (plist-get nov-highlights-bookmarks-last-position :chapter))
+          (last-position (plist-get nov-highlights-bookmarks-last-position :position)))
+
+      ;; Navigate back
+      (nov-highlights-bookmarks-goto-position last-chapter last-position)
+      (message "Returned to previous position"))))
+
 ;; Keybindings for bookmarks will be added via nov-mode-hook
-;; Using C-b prefix to avoid conflicts with nov-mode and nov-highlights-mode
+;; Using ' prefix to match pdf-bookmarks package
 
 ;; Zoom Functions
 
@@ -1390,11 +1415,13 @@ needed because EPUB rendering can shift positions slightly."
   (local-set-key (kbd "C-=") #'nov-highlights-zoom-in)  ; Alternative
   (local-set-key (kbd "C--") #'nov-highlights-zoom-out)
   (local-set-key (kbd "C-0") #'nov-highlights-zoom-reset)
-  ;; Bookmark keybindings
-  (local-set-key (kbd "C-b c") #'nov-highlights-bookmarks-create)
-  (local-set-key (kbd "C-b b") #'nov-highlights-bookmarks-access)
-  (local-set-key (kbd "C-b d") #'nov-highlights-bookmarks-delete)
-  (local-set-key (kbd "C-b r") #'nov-highlights-bookmarks-rename))
+  ;; Bookmark keybindings (using ' prefix like pdf-bookmarks)
+  (local-set-key (kbd "'") nil)  ; Unbind ' first to use as prefix
+  (local-set-key (kbd "' b") #'nov-highlights-bookmarks-create)
+  (local-set-key (kbd "' g") #'nov-highlights-bookmarks-access)
+  (local-set-key (kbd "' l") #'nov-highlights-bookmarks-back)
+  (local-set-key (kbd "' d") #'nov-highlights-bookmarks-delete)
+  (local-set-key (kbd "' r") #'nov-highlights-bookmarks-rename))
 
 ;; Enable keybindings when global mode is enabled (handled in nov-highlights-global-mode-enable)
 

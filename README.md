@@ -85,7 +85,7 @@ If you find this project helpful, consider supporting it!
 
 ## Highlighting Commands
 
-nov-highlights-green        	        `g`
+nov-highlights-green        	        `y`
 nov-highlights-orange	                `h`
 nov-highlights-purple	                `,`
 nov-highlights-pink	                    `j`
@@ -106,10 +106,11 @@ nov-highlights-export-to-markdown	    `C-c C-m`
 
 Quickly mark and navigate between important locations in your EPUB books.
 
-nov-highlights-bookmarks-create         `C-b c`
-nov-highlights-bookmarks-access         `C-b b`
-nov-highlights-bookmarks-delete         `C-b d`
-nov-highlights-bookmarks-rename         `C-b r`
+nov-highlights-bookmarks-create         `' b`
+nov-highlights-bookmarks-access         `' g`
+nov-highlights-bookmarks-back           `' l`
+nov-highlights-bookmarks-delete         `' d`
+nov-highlights-bookmarks-rename         `' r`
 
 **Features:**
 - Bookmarks persist across sessions
@@ -117,6 +118,7 @@ nov-highlights-bookmarks-rename         `C-b r`
 - Smart defaulting for quick navigation between bookmarks
 - Sorted by chapter and position order
 - Quick toggle between current bookmark and last accessed bookmark
+- Go back to previous position after bookmark navigation
 
 **Storage:** `~/.emacs.d/nov-bookmarks/`
 
@@ -188,7 +190,30 @@ This will find highlights stored under the old filename and migrate them to use 
 
 nov-highlights-zoom-in      `C-+` or `C-=`
 nov-highlights-zoom-out     `C--`
-nov-highlights-zoom-reset   `C-0`  
+nov-highlights-zoom-reset   `C-0`
+
+**Note**: After zooming, press `g` to redisplay the page with proper text wrapping.
+
+### Setting Default Font Size
+
+For a better experience, set a larger default font in your init file instead of using zoom:
+
+```elisp
+;; Adjust nov-mode default font size
+(defun my-nov-font-setup ()
+  (face-remap-add-relative 'variable-pitch
+                          :family "Liberation Serif"  ; or your preferred font
+                          :height 1.2))               ; 1.2 = 20% larger, adjust as needed
+(add-hook 'nov-mode-hook 'my-nov-font-setup)
+```
+
+Or to change just the size without changing the font family:
+
+```elisp
+(add-hook 'nov-mode-hook
+          (lambda ()
+            (face-remap-add-relative 'variable-pitch :height 1.3)))  ; 30% larger
+```  
 
 
 
