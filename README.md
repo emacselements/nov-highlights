@@ -124,9 +124,15 @@ nov-highlights-bookmarks-rename         `' r`
 
 ## Configuration
 
-### Important Note About Tooltips
+### Tooltip Configuration (Optional)
 
-When `nov-highlights-mode` is enabled, it sets `x-gtk-use-system-tooltips` to `nil` to ensure annotations display properly. This is a global Emacs setting. If you need to restore the system tooltip behavior, disable the mode or manually reset the variable.
+For better annotation tooltip display, you may want to add this to your init file:
+
+```elisp
+(setq x-gtk-use-system-tooltips nil)
+```
+
+This improves how annotation popups are displayed when hovering over highlights.
 
 ### Recommended Nov Mode Settings
 

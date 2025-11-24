@@ -30,7 +30,7 @@
 ;; for Nov Mode (ePub reader).
 ;;
 ;; Features:
-;; - Highlight text in green (g), orange (h), purple (,), pink (j),
+;; - Highlight text in green (y), orange (h), purple (,), pink (j),
 ;;   blue underline (u), and strikeout in red (s)
 ;; - Add annotations to highlighted text (n) - creates yellow highlight
 ;;   with note
@@ -43,12 +43,18 @@
 ;; - Navigate between annotations with Alt-n and Alt-p (opens editor at
 ;;   bottom automatically)
 ;; - Navigation prompts before wrapping to first/last annotation
-;; - Export all highlights and annotations to Org mode file (e) or
-;;   Markdown file (m)
+;; - Export all highlights and annotations to Org mode file (C-c C-e) or
+;;   Markdown file (C-c C-m)
 ;; - Exports maintain proper chapter and position order
-;; - Create and navigate bookmarks (C-b c to create, C-b b to access)
+;; - Create and navigate bookmarks (' b to create, ' g to access, ' l to
+;;   go back)
 ;; - Bookmarks persist across sessions and survive file moves/renames
 ;; - Persistent storage of highlights and bookmarks across sessions
+;;
+;; Configuration tips:
+;; - For better annotation tooltip display, you may want to set
+;;   `x-gtk-use-system-tooltips' to nil in your init file
+;; - Use `g' to redisplay content after zooming for proper text wrapping
 
 ;;; Code:
 
@@ -981,11 +987,7 @@ Close annotation window if open."
 
 (defun nov-highlights-setup ()
   "Set up highlights when entering Nov mode."
-  ;; Configure tooltips for annotations
-  (when (boundp 'x-gtk-use-system-tooltips)
-    (setq x-gtk-use-system-tooltips nil))
   (nov-highlights--configure-tooltip-frame)
-  ;; Set up highlights
   (nov-highlights--load-db)
   (nov-highlights--restore-highlights)
   (add-hook 'nov-post-html-render-hook #'nov-highlights--restore-highlights nil t))
