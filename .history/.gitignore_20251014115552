@@ -1,7 +1,0 @@
-# Backup files
-*.bak
-*.bak.*
-*~
-
-# AI assistant context files
-CLAUDE.md
